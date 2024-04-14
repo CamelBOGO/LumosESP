@@ -2,18 +2,11 @@ import time
 import asyncio
 from microdot import Microdot, send_file
 import network
-import esp
+# import esp
 import gc
 
-try:
-    import usocket as socket
-    print("Using usocket...")
-except:
-    import socket
-    print("Using socket...")
-
 # Disable vendor OS debug log.
-esp.osdebug(None)
+# esp.osdebug(None)
 # Run the garbage collector to free up memory.
 gc.collect()
 
@@ -21,8 +14,8 @@ gc.collect()
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-ssid = "ESP32-AP"
-password = "1234567890"
+# ssid = "ESP32-AP"
+# password = "1234567890"
 
 
 # ==================================================

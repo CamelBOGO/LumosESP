@@ -10,13 +10,16 @@ print(os.listdir())
 # Delete the file
 os.remove("main.py")
 os.remove("./static/index.html")
-os.remove("bootstrap.js")
 
 # Create a new folder
+os.mkdir("static")
+os.mkdir("static/css")
 os.mkdir("static/js")
 
 # Move the file to the new folder
 os.rename("index.html", "static/index.html")
+os.rename("bootstrap.min.css", "static/css/bootstrap.min.css")
+os.rename("bootstrap.min.js", "static/js/bootstrap.min.js")
 
 # cd to the new folder
 os.chdir("..")
