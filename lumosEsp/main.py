@@ -16,8 +16,6 @@ esp.osdebug(None)
 # Run the garbage collector to free up memory.
 gc.collect()
 
-# Create an instance of the Microdot class.
-app = Microdot()
 
 # ==================================================
 # WiFi and Device Settings
@@ -47,7 +45,7 @@ print(ap.ifconfig())
 
 
 # ==================================================
-# The HTML Page
+# Sample HTML Page
 # ==================================================
 def web_page():
     html = """
@@ -69,35 +67,49 @@ def web_page():
 # ==================================================
 # For the symbol of @, see: https://ithelp.ithome.com.tw/articles/10200763
 # For async/await, see: https://ithelp.ithome.com.tw/articles/10262385
+
+# Create an instance of the Microdot class.
+app = Microdot()
+
+
 @app.route("/")
-async def hello(request):
+async def hello(req):
     return send_file("./static/index.html", 200)
 
 
 @app.get("/css/bootstrap.min.css")
-async def materialize_css(request):
+async def materialize_css(req):
     return send_file("./static/css/bootstrap.min.css", 200)
 
 
 @app.get("/js/bootstrap.min.js")
-async def materialize_js(request):
+async def materialize_js(req):
     return send_file("./static/js/bootstrap.min.js", 200)
+
 
 # ==================================================
 # APIs
 # ==================================================
-
-
 @app.get("/api/led_on")
-async def led_on(request):
+async def led_on(req):
     print("LED ON")
     return {"status": "on"}, 200
 
 
 @app.get("/api/led_off")
-async def led_off(request):
+async def led_off(req):
     print("LED OFF")
     return {"status": "off"}, 200
+
+
+@app.put("/api/led")
+async def led(req):
+    print(f"Req: {req}")
+    data = req.json
+    print(f"Type of data: {type(data)}")
+    print(f"Data: {data}")
+    print(f"LED: {data["led"]}")
+    return {"status": "patch"}, 200
 
 
 # ==================================================
@@ -106,7 +118,7 @@ async def led_off(request):
 async def task():
     while True:
         print("Task running...")
-        await asyncio.sleep(3)
+        await asyncio.sleep(10)
 
 
 # ==================================================
