@@ -1,3 +1,4 @@
+import time
 import asyncio
 from microdot import Microdot, send_file
 import network
@@ -28,25 +29,51 @@ password = "1234567890"
 # Access Point
 # https://randomnerdtutorials.com/micropython-esp32-esp8266-access-point-ap/
 # ==================================================
-# Create an Access Point.
-ap = network.WLAN(network.AP_IF)
-# Set the AP to be active.
-ap.active(True)
-# Set the AP configuration.
-ap.config(essid=ssid, authmode=network.AUTH_WPA_WPA2_PSK, password=password)
+# # Create an Access Point.
+# ap = network.WLAN(network.AP_IF)
+# # Set the AP to be active.
+# ap.active(True)
+# # Set the AP configuration.
+# ap.config(essid=ssid, authmode=network.AUTH_WPA_WPA2_PSK, password=password)
 
-# While the AP is not active, do nothing.
-while ap.active() == False:
-    pass
+# # While the AP is not active, do nothing.
+# while ap.active() == False:
+#     pass
 
-# Print the success message and the ap config.
+# # Print the success message and the ap config.
+# print("Connection successful")
+# print(ap.ifconfig())
+
+
+# ==================================================
+# Connect to WiFi
+# ==================================================
+wifiSSID = "TP-LINK_ED469C"
+wifiPassword = "Pi3.14159265"
+
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+
+while not wlan.isconnected():
+    try:
+        # Disconnect and connect again
+        print(f"Connecting to network...")
+        wlan.disconnect()
+        time.sleep(1)
+        wlan.connect(wifiSSID, wifiPassword)
+        time.sleep(2)
+    except OSError:
+        print("Failed to connect to network.")
+
+# Print the success message and the wlan config.
 print("Connection successful")
-print(ap.ifconfig())
-
+print(wlan.ifconfig())
 
 # ==================================================
 # Sample HTML Page
 # ==================================================
+
+
 def web_page():
     html = """
     <!DOCTYPE html>
