@@ -5,15 +5,66 @@
 
         <title>LumosESP</title>
         <meta charset="UTF-8" />
+        <link rel="icon" href="data:,">
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     </head>
     <body>
+        <!-- The Title of The Website -->
         <h1 class="text-center">LumosESP</h1>
-        <h1 class="text-center">Hello, World!</h1>
+
+        <!-- The Form of Colour Selection -->
+        <div id="selectColour" class="container-fluid" style="max-width: 768px">
+            <form>
+                <label for="selectColour" class="form-label">Select a colour:</label>
+                <select id="selectColour" class="form-select">
+                    <option selected value="off">Off</option>
+                    <option value="red">Red</option>
+                    <option value="green">Green</option>
+                    <option value="blue">Blue</option>
+                    <option value="white">White</option>
+                </select>
+            </form>
+
+            <!-- The Text of Current Colour -->
+            <p class="d-inline-flex my-2">Current Colour:</p>
+            <p id="currentColour" class="d-inline-flex my-2">N/A</p>
+        </div>
     </body>
 
+    <!-- Script Here -->
     <script src="./js/bootstrap.min.js"></script>
     <script>
-        console.log('Hello, World!');
+        console.log("Hello, World!");
+
+        document.getElementById("selectColour").addEventListener("change", function (event) {
+            console.log(event.target.value);
+        });
+
+        setColourText();
+
+        async function setColourText() {
+            try {
+                // Fetch the current LED colour.
+                const response = await fetch("/api/led");
+
+                // Check if the response was successful.
+                if (!response.ok) {
+                    console.error("Failed to fetch LED colour");
+                    return;
+                }
+
+                // Parse the response JSON.
+                const data = await response.json();
+
+                // Set the current colour text.
+                if (data.led) {
+                    document.getElementById("currentColour").innerText = data.led;
+                } else {
+                    console.error("Invalid response from server.");
+                }
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
     </script>
 </html>
