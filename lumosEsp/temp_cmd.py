@@ -8,6 +8,7 @@ except ImportError:
 print(os.listdir())
 
 # Delete the file
+os.remove("boot.py")
 os.remove("main.py")
 os.remove("./static/index.html")
 
@@ -26,3 +27,6 @@ os.chdir("..")
 
 # Check how many storage is available
 print(os.statvfs("/"))
+
+import micropython
+micropython.mem_info()

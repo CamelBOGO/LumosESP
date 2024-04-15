@@ -1,14 +1,24 @@
-import time
 import asyncio
 from microdot import Microdot, send_file
 import network
 # import esp
 import gc
+from machine import Pin
 
 # Disable vendor OS debug log.
 # esp.osdebug(None)
 # Run the garbage collector to free up memory.
 gc.collect()
+
+
+# ==================================================
+# Pin Assignments
+# ==================================================
+rPin = Pin(15, Pin.OUT)
+gPin = Pin(2, Pin.OUT)
+bPin = Pin(4, Pin.OUT)
+
+ledStatus = "off"
 
 
 # ==================================================
@@ -46,40 +56,22 @@ wifiPassword = "Pi3.14159265"
 
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
+wlan.connect(wifiSSID, wifiPassword)
 
 while not wlan.isconnected():
-    try:
-        # Disconnect and connect again
-        print(f"Connecting to network...")
-        wlan.disconnect()
-        time.sleep(1)
-        wlan.connect(wifiSSID, wifiPassword)
-        time.sleep(2)
-    except OSError:
-        print("Failed to connect to network.")
+    # try:
+    #     # Disconnect and connect again
+    #     print(f"Connecting to network...")
+    #     wlan.disconnect()
+    #     wlan.connect(wifiSSID, wifiPassword)
+    #     # Wait for 5 seconds
+    # except OSError:
+    #     print("Failed to connect to network.")
+    pass
 
 # Print the success message and the wlan config.
 print("Connection successful")
 print(wlan.ifconfig())
-
-# ==================================================
-# Sample HTML Page
-# ==================================================
-
-
-def web_page():
-    html = """
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <title>Hello, World!</title>
-        </head>
-        <body>
-            <h1>Hello, World!</h1>
-        </body>
-    </html>
-    """
-    return html
 
 
 # ==================================================
@@ -110,35 +102,48 @@ async def materialize_js(req):
 # ==================================================
 # APIs
 # ==================================================
-@app.get("/api/led_on")
-async def led_on(req):
-    print("LED ON")
-    return {"status": "on"}, 200
-
-
-@app.get("/api/led_off")
-async def led_off(req):
-    print("LED OFF")
-    return {"status": "off"}, 200
+@app.get("/api/led")
+async def led_get(req):
+    print("Getting LED status...")
+    return {"led": ledStatus}, 200
 
 
 @app.put("/api/led")
-async def led(req):
-    print(f"Req: {req}")
+async def led_put(req):
+    global ledStatus
     data = req.json
-    print(f"Type of data: {type(data)}")
-    print(f"Data: {data}")
-    print(f"LED: {data["led"]}")
-    return {"status": "patch"}, 200
+    print(f"Setting LED to {data["led"]}...")
+    ledStatus = data["led"]
+    return {"led": ledStatus}, 200
 
 
 # ==================================================
 # Other Functions
 # ==================================================
-async def task():
+async def led_update():
     while True:
-        print("Task running...")
-        await asyncio.sleep(10)
+        print("Current LED status: ", ledStatus)
+        if ledStatus == "off":
+            rPin.off()
+            gPin.off()
+            bPin.off()
+        elif ledStatus == "red":
+            rPin.on()
+            gPin.off()
+            bPin.off()
+        elif ledStatus == "green":
+            rPin.off()
+            gPin.on()
+            bPin.off()
+        elif ledStatus == "blue":
+            rPin.off()
+            gPin.off()
+            bPin.on()
+        else:
+            rPin.on()
+            gPin.on()
+            bPin.on()
+        await asyncio.sleep(3)
 
 
 # ==================================================
@@ -147,7 +152,7 @@ async def task():
 # For asyncio, see: https://github.com/orgs/micropython/discussions/10933
 # and also see: https://docs.micropython.org/en/latest/library/asyncio.html
 async def main():
-    task_normal = asyncio.create_task(task())
+    task_normal = asyncio.create_task(led_update())
     task_server = asyncio.create_task(app.run(port=80, debug=True))
     await asyncio.gather(task_normal, task_server)
 
