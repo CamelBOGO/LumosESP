@@ -3,7 +3,7 @@ from microdot import Microdot, send_file
 import network
 # import esp
 import gc
-from machine import Pin
+from machine import Pin, PWM
 
 # Disable vendor OS debug log.
 # esp.osdebug(None)
@@ -14,19 +14,19 @@ gc.collect()
 # ==================================================
 # Pin Assignments
 # ==================================================
-rPin = Pin(15, Pin.OUT)
-gPin = Pin(2, Pin.OUT)
-bPin = Pin(4, Pin.OUT)
+rPwm = PWM(Pin(15), freq=1000, duty=1023)
+gPwm = PWM(Pin(2), freq=1000, duty=1023)
+bPwm = PWM(Pin(4), freq=1000, duty=1023)
 
-pinStatesData = {
-    "off":  (False, False, False),
-    "red":  (True,  False, False),
-    "green": (False, True,  False),
-    "blue": (False, False, True),
-    "default": (True, True, True)
+colourData = {
+    "off": 0x000000,
+    "red":  0xff0000,
+    "green": 0x00ff00,
+    "blue": 0x0000ff,
+    "default": 0xffffff
 }
 
-ledStatus = "off"
+ledStatus = 0xffffff
 
 
 # ==================================================
@@ -116,23 +116,55 @@ async def led_put(req):
     global ledStatus
     data = req.json
     print(f"Setting LED to {data["led"]}...")
-    ledStatus = data["led"]
+    # if isinstance(data["led"], int) and 0x000000 <= color <= 0xffffff:
+    ledStatus = colourData.get(data["led"], colourData["default"])
     return {"led": ledStatus}, 200
 
 
 # ==================================================
 # Other Functions
 # ==================================================
+def map(value, fromRange, toRange):
+    (fromLow, fromHigh) = fromRange
+    (toLow, toHigh) = toRange
+    return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow
+
+
 async def led_update():
-    global pinStatesData
     myLedStatus = ledStatus
+
     while True:
-        if myLedStatus != ledStatus:
-            rState, gState, bState = pinStatesData.get(ledStatus, pinStatesData["default"])
-            rPin.value(rState)
-            gPin.value(gState)
-            bPin.value(bState)
-            myLedStatus = ledStatus
+        while myLedStatus != ledStatus:
+            print(f"Current LED status: {myLedStatus}, Target LED status: {ledStatus}")
+
+            rTarget = (ledStatus >> 16) & 0xff
+            gTarget = (ledStatus >> 8) & 0xff
+            bTarget = ledStatus & 0xff
+
+            print(f"rTarget: {rTarget}, gTarget: {gTarget}, bTarget: {bTarget}")
+
+            rCurrent = (myLedStatus >> 16) & 0xff
+            gCurrent = (myLedStatus >> 8) & 0xff
+            bCurrent = myLedStatus & 0xff
+
+            print(f"rCurrent: {rCurrent}, gCurrent: {gCurrent}, bCurrent: {bCurrent}")
+
+            rCurrent += 0 if rTarget == rCurrent else (1 if rTarget > rCurrent else -1)
+            gCurrent += 0 if gTarget == gCurrent else (1 if gTarget > gCurrent else -1)
+            bCurrent += 0 if bTarget == bCurrent else (1 if bTarget > bCurrent else -1)
+
+            print(f"Updated -> rCurrent: {rCurrent}, gCurrent: {gCurrent}, bCurrent: {bCurrent}")
+
+            rPwm.duty(int(map(rCurrent, (0, 255), (0, 1023))))
+            gPwm.duty(int(map(gCurrent, (0, 255), (0, 1023))))
+            bPwm.duty(int(map(bCurrent, (0, 255), (0, 1023))))
+
+            myLedStatus = (rCurrent << 16) | (gCurrent << 8) | bCurrent
+
+            print(f"Updated -> Current LED status: {myLedStatus}, Target LED status: {ledStatus}\n")
+
+            await asyncio.sleep(0.01)
+
         await asyncio.sleep(1)
 
 
