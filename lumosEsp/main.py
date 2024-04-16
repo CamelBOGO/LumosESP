@@ -83,6 +83,15 @@ print(wlan.ifconfig())
 
 
 # ==================================================
+# General Functions
+# ==================================================
+def map(value, fromRange, toRange):
+    (fromLow, fromHigh) = fromRange
+    (toLow, toHigh) = toRange
+    return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow
+
+
+# ==================================================
 # Pages
 # ==================================================
 # For the symbol of @, see: https://ithelp.ithome.com.tw/articles/10200763
@@ -122,49 +131,42 @@ async def led_put(req):
 
 
 # ==================================================
-# Other Functions
+# asyncio Functions
 # ==================================================
-def map(value, fromRange, toRange):
-    (fromLow, fromHigh) = fromRange
-    (toLow, toHigh) = toRange
-    return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow
-
-
 async def led_update():
+    # Create a local variable to store the current LED status.
     myLedStatus = ledStatus
 
     while True:
+        # If the current LED status is not equal to the target LED status, update the LED status.
         while myLedStatus != ledStatus:
-            print(f"Current LED status: {myLedStatus}, Target LED status: {ledStatus}")
-
+            # Get the target RGB values.
             rTarget = (ledStatus >> 16) & 0xff
             gTarget = (ledStatus >> 8) & 0xff
             bTarget = ledStatus & 0xff
 
-            print(f"rTarget: {rTarget}, gTarget: {gTarget}, bTarget: {bTarget}")
-
+            # Get the current RGB values.
             rCurrent = (myLedStatus >> 16) & 0xff
             gCurrent = (myLedStatus >> 8) & 0xff
             bCurrent = myLedStatus & 0xff
 
-            print(f"rCurrent: {rCurrent}, gCurrent: {gCurrent}, bCurrent: {bCurrent}")
-
+            # Update the current RGB values to the target RGB values by 1 step.
             rCurrent += 0 if rTarget == rCurrent else (1 if rTarget > rCurrent else -1)
             gCurrent += 0 if gTarget == gCurrent else (1 if gTarget > gCurrent else -1)
             bCurrent += 0 if bTarget == bCurrent else (1 if bTarget > bCurrent else -1)
 
-            print(f"Updated -> rCurrent: {rCurrent}, gCurrent: {gCurrent}, bCurrent: {bCurrent}")
-
+            # Convert the current RGB values to the PWM duty cycle values, and update the duty.
             rPwm.duty(int(map(rCurrent, (0, 255), (0, 1023))))
             gPwm.duty(int(map(gCurrent, (0, 255), (0, 1023))))
             bPwm.duty(int(map(bCurrent, (0, 255), (0, 1023))))
 
+            # Update the current LED status.
             myLedStatus = (rCurrent << 16) | (gCurrent << 8) | bCurrent
 
-            print(f"Updated -> Current LED status: {myLedStatus}, Target LED status: {ledStatus}\n")
-
+            # When the LED colour is changing, use a short delay to make the colour changing smoothly.
             await asyncio.sleep(0.01)
 
+        # If the current LED status is equal to the target LED status, check again in 1 second.
         await asyncio.sleep(1)
 
 
