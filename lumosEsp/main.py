@@ -125,11 +125,14 @@ async def led_put(req):
 # ==================================================
 async def led_update():
     global pinStatesData
+    myLedStatus = ledStatus
     while True:
-        rState, gState, bState = pinStatesData.get(ledStatus, pinStatesData["default"])
-        rPin.value(rState)
-        gPin.value(gState)
-        bPin.value(bState)
+        if myLedStatus != ledStatus:
+            rState, gState, bState = pinStatesData.get(ledStatus, pinStatesData["default"])
+            rPin.value(rState)
+            gPin.value(gState)
+            bPin.value(bState)
+            myLedStatus = ledStatus
         await asyncio.sleep(1)
 
 

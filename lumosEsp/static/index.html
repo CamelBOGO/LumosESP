@@ -59,18 +59,7 @@
     <script>
         document.getElementById("selectColour").addEventListener("change", function (event) {
             console.log(event.target.value);
-            try {
-                // Send a POST request to the server to change the LED colour.
-                fetch("/api/led", {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ led: event.target.value }),
-                });
-            } catch (error) {
-                console.error("An error occurred:", error);
-            }
+            putColour(event.target.value);
         });
 
         setColourText();
@@ -87,6 +76,36 @@
                 }
 
                 // Parse the response JSON.
+                const data = await response.json();
+
+                // Set the current colour text.
+                if (data.led) {
+                    document.getElementById("currentColour").innerText = data.led;
+                } else {
+                    console.error("Invalid response from server.");
+                }
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
+
+        async function putColour(colour) {
+            try {
+                // Send a PUT request to the server to change the LED colour.
+                const response = await fetch("/api/led", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ led: colour }),
+                });
+
+                // Check if the response was successful.
+                if (response.status !== 200) {
+                    console.error("Failed to change LED colour");
+                    return;
+                }
+
                 const data = await response.json();
 
                 // Set the current colour text.
