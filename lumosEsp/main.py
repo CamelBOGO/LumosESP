@@ -64,22 +64,20 @@ wifiPassword = "Pi3.14159265"
 
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
+mac = wlan.config("mac")
+host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
+wlan.config(dhcp_hostname=host)
 wlan.connect(wifiSSID, wifiPassword)
 
+# Wait for the connection to be established
 while not wlan.isconnected():
-    # try:
-    #     # Disconnect and connect again
-    #     print(f"Connecting to network...")
-    #     wlan.disconnect()
-    #     wlan.connect(wifiSSID, wifiPassword)
-    #     # Wait for 5 seconds
-    # except OSError:
-    #     print("Failed to connect to network.")
     pass
 
 # Print the success message and the wlan config.
 print("Connection successful")
-print(wlan.ifconfig())
+wlan_config = wlan.ifconfig()
+host = wlan.config("dhcp_hostname")
+print(f'Wifi connected as {host}/{wlan_config[0]}, net={wlan_config[1]}, gw={wlan_config[2]}, dns={wlan_config[3]}')
 
 
 # ==================================================
