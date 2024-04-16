@@ -34,6 +34,8 @@ ledStatus = 0xffffff
 # ==================================================
 # ssid = "ESP32-AP"
 # password = "1234567890"
+wifiSSID = "TP-LINK_ED469C"
+wifiPassword = "Pi3.14159265"
 
 
 # ==================================================
@@ -54,30 +56,6 @@ ledStatus = 0xffffff
 # # Print the success message and the ap config.
 # print("Connection successful")
 # print(ap.ifconfig())
-
-
-# ==================================================
-# Connect to WiFi
-# ==================================================
-wifiSSID = "TP-LINK_ED469C"
-wifiPassword = "Pi3.14159265"
-
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
-mac = wlan.config("mac")
-host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
-wlan.config(dhcp_hostname=host)
-wlan.connect(wifiSSID, wifiPassword)
-
-# Wait for the connection to be established
-while not wlan.isconnected():
-    pass
-
-# Print the success message and the wlan config.
-print("Connection successful")
-wlan_config = wlan.ifconfig()
-host = wlan.config("dhcp_hostname")
-print(f'Wifi connected as {host}/{wlan_config[0]}, net={wlan_config[1]}, gw={wlan_config[2]}, dns={wlan_config[3]}')
 
 
 # ==================================================
@@ -131,6 +109,35 @@ async def led_put(req):
 # ==================================================
 # asyncio Functions
 # ==================================================
+async def wifi_connect():
+    gc.collect()
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    mac = wlan.config("mac")
+    host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
+    wlan.config(dhcp_hostname=host)
+    wlan.connect(wifiSSID, wifiPassword)
+
+    while True:
+        if not wlan.isconnected():
+            print("Connecting to WiFi...")
+            await asyncio.sleep(1)
+        else:
+            print("Connection successful")
+            wlanConfig = wlan.ifconfig()
+            host = wlan.config("dhcp_hostname")
+            print(
+                f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
+
+            while wlan.isconnected():
+                await asyncio.sleep(1)
+
+
+async def network_control():
+    while True:
+        await wifi_connect()
+
+
 async def led_update():
     # Create a local variable to store the current LED status.
     myLedStatus = ledStatus
@@ -174,9 +181,10 @@ async def led_update():
 # For asyncio, see: https://github.com/orgs/micropython/discussions/10933
 # and also see: https://docs.micropython.org/en/latest/library/asyncio.html
 async def main():
-    task_normal = asyncio.create_task(led_update())
+    task_network = asyncio.create_task(network_control())
+    task_led = asyncio.create_task(led_update())
     task_server = asyncio.create_task(app.run(port=80, debug=True))
-    await asyncio.gather(task_normal, task_server)
+    await asyncio.gather(task_network, task_led, task_server)
 
 while True:
     asyncio.run(main())
