@@ -93,18 +93,13 @@ app = Microdot()
 
 
 @app.route("/")
-async def hello(req):
+async def send_index(req):
     return send_file("./static/index.html", 200)
 
 
-@app.get("/css/bootstrap.min.css")
-async def materialize_css(req):
-    return send_file("./static/css/bootstrap.min.css", 200)
-
-
-@app.get("/js/bootstrap.min.js")
-async def materialize_js(req):
-    return send_file("./static/js/bootstrap.min.js", 200)
+@app.get("/css/pico.indigo.min.css")
+async def send_css(req):
+    return send_file("./static/css/pico.indigo.min.css", 200)
 
 
 # ==================================================

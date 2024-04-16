@@ -11,6 +11,8 @@ print(os.listdir())
 os.remove("boot.py")
 os.remove("main.py")
 os.remove("./static/index.html")
+os.remove("./static/css/bootstrap.min.css")
+os.remove("./static/js/bootstrap.min.js")
 
 # Create a new folder
 os.mkdir("static")
@@ -21,9 +23,10 @@ os.mkdir("static/js")
 os.rename("index.html", "static/index.html")
 os.rename("bootstrap.min.css", "static/css/bootstrap.min.css")
 os.rename("bootstrap.min.js", "static/js/bootstrap.min.js")
+os.rename("pico.indigo.min.css", "static/css/pico.indigo.min.css")
 
 # cd to the new folder
-os.chdir("..")
+os.chdir("css")
 
 # Check how many storage is available
 print(os.statvfs("/"))
