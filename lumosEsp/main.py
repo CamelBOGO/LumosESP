@@ -18,6 +18,14 @@ rPin = Pin(15, Pin.OUT)
 gPin = Pin(2, Pin.OUT)
 bPin = Pin(4, Pin.OUT)
 
+pinStatesData = {
+    "off":  (False, False, False),
+    "red":  (True,  False, False),
+    "green": (False, True,  False),
+    "blue": (False, False, True),
+    "default": (True, True, True)
+}
+
 ledStatus = "off"
 
 
@@ -121,29 +129,13 @@ async def led_put(req):
 # Other Functions
 # ==================================================
 async def led_update():
+    global pinStatesData
     while True:
-        print("Current LED status: ", ledStatus)
-        if ledStatus == "off":
-            rPin.off()
-            gPin.off()
-            bPin.off()
-        elif ledStatus == "red":
-            rPin.on()
-            gPin.off()
-            bPin.off()
-        elif ledStatus == "green":
-            rPin.off()
-            gPin.on()
-            bPin.off()
-        elif ledStatus == "blue":
-            rPin.off()
-            gPin.off()
-            bPin.on()
-        else:
-            rPin.on()
-            gPin.on()
-            bPin.on()
-        await asyncio.sleep(3)
+        rState, gState, bState = pinStatesData.get(ledStatus, pinStatesData["default"])
+        rPin.value(rState)
+        gPin.value(gState)
+        bPin.value(bState)
+        await asyncio.sleep(1)
 
 
 # ==================================================

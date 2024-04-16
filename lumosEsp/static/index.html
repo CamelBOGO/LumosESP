@@ -5,7 +5,7 @@
 
         <title>LumosESP</title>
         <meta charset="UTF-8" />
-        <link rel="icon" href="data:,">
+        <link rel="icon" href="data:," />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     </head>
     <body>
@@ -34,10 +34,20 @@
     <!-- Script Here -->
     <script src="./js/bootstrap.min.js"></script>
     <script>
-        console.log("Hello, World!");
-
         document.getElementById("selectColour").addEventListener("change", function (event) {
             console.log(event.target.value);
+            try {
+                // Send a POST request to the server to change the LED colour.
+                fetch("/api/led", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ led: event.target.value }),
+                });
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
         });
 
         setColourText();
