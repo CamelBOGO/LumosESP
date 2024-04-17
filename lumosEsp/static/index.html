@@ -52,6 +52,10 @@
             <!-- The Text of Current Colour -->
             <p>Current Colour:</p>
             <p id="currentColour">N/A</p>
+
+            <!-- WiFi Status -->
+            <p>WiFi Status:</p>
+            <p id="wifiStatus">N/A</p>
         </div>
     </body>
 
@@ -116,11 +120,38 @@
             }
         }
 
+        async function getWifiStatus() {
+            try {
+                // Fetch the current WiFi status.
+                const response = await fetch("/api/wifi");
+
+                // Check if the response was successful.
+                if (!response.ok) {
+                    console.error("Failed to fetch WiFi status");
+                    return;
+                }
+
+                // Parse the response JSON.
+                const data = await response.json();
+
+                // Set the current WiFi status text.
+                if (data.mode == 0) {
+                    document.getElementById("wifiStatus").innerText = "AP Mode";
+                } else {
+                    document.getElementById("wifiStatus").innerText = "WiFi Mode";
+                }
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
+
+        // Main Script
         document.getElementById("selectColour").addEventListener("change", function (event) {
             console.log(event.target.value);
             putColour(event.target.value);
         });
 
         setColourText();
+        getWifiStatus();
     </script>
 </html>
