@@ -32,30 +32,12 @@ ledStatus = 0xffffff
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-# ssid = "ESP32-AP"
-# password = "1234567890"
-wifiSSID = "TP-LINK_ED469C"
-wifiPassword = "Pi3.14159265"
-
-
-# ==================================================
-# Access Point
-# https://randomnerdtutorials.com/micropython-esp32-esp8266-access-point-ap/
-# ==================================================
-# # Create an Access Point.
-# ap = network.WLAN(network.AP_IF)
-# # Set the AP to be active.
-# ap.active(True)
-# # Set the AP configuration.
-# ap.config(essid=ssid, authmode=network.AUTH_WPA_WPA2_PSK, password=password)
-
-# # While the AP is not active, do nothing.
-# while ap.active() == False:
-#     pass
-
-# # Print the success message and the ap config.
-# print("Connection successful")
-# print(ap.ifconfig())
+networkMode = 0  # 0: AP, 1: WiFi
+mac = network.WLAN().config("mac")
+apSsid = "ESP32-AP"
+apPassword = "1234567890"
+wifiSsid = "wifissid"
+wifiPassword = "wifipassword"
 
 
 # ==================================================
@@ -90,6 +72,27 @@ async def send_css(req):
 # ==================================================
 # APIs
 # ==================================================
+@app.get("/api/wifi")
+async def wifi_get(req):
+    print("Getting network mode...")
+    return {"mode": networkMode}, 200
+
+
+@app.put("/api/wifi")
+async def wifi_post(req):
+    global wifiSsid, wifiPassword, networkMode
+    data = req.json
+    print(f"Received data: {data}")
+    # Check if the ssid and password are provided.
+    if "ssid" in data and "password" in data:
+        wifiSsid = data["ssid"]
+        wifiPassword = data["password"]
+        networkMode = 1
+        return {"mode": networkMode}, 200
+    else:
+        return {"error": "Invalid data"}, 400
+
+
 @app.get("/api/led")
 async def led_get(req):
     print("Getting LED status...")
@@ -109,17 +112,52 @@ async def led_put(req):
 # ==================================================
 # asyncio Functions
 # ==================================================
+# Access Point
+# https://randomnerdtutorials.com/micropython-esp32-esp8266-access-point-ap/
+async def ap_setup():
+    gc.collect()
+    # Create an Access Point.
+    ap = network.WLAN(network.AP_IF)
+    # Set the AP to be active.
+    ap.active(True)
+    # Set the AP configuration.
+    ap.config(essid=apSsid, authmode=network.AUTH_WPA_WPA2_PSK, password=apPassword)
+
+    while True:
+        if networkMode == 1:
+            break
+
+        # While the AP is not active, do nothing.
+        if ap.active() == False:
+            print("Setting up AP...")
+            asyncio.sleep(1)
+        else:
+            # Print the success message and the ap config.
+            print("Connection successful")
+            print(ap.ifconfig())
+
+            while ap.active():
+                if networkMode == 1:
+                    break
+
+                await asyncio.sleep(1)
+
+    # If the network mode is changed to WiFi, deactivate the AP.
+    print("Deactivating AP...")
+    ap.active(False)
+    return
+
+
 async def wifi_connect():
     gc.collect()
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    mac = wlan.config("mac")
     host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
     wlan.config(dhcp_hostname=host)
-    wlan.connect(wifiSSID, wifiPassword)
+    wlan.connect(wifiSsid, wifiPassword)
 
     while True:
-        if not wlan.isconnected():
+        if wlan.isconnected() == False:
             print("Connecting to WiFi...")
             await asyncio.sleep(1)
         else:
@@ -135,7 +173,12 @@ async def wifi_connect():
 
 async def network_control():
     while True:
-        await wifi_connect()
+        if networkMode == 0:
+            print("Now entering AP mode...")
+            await ap_setup()
+        elif networkMode == 1:
+            print("Now entering WiFi mode...")
+            await wifi_connect()
 
 
 async def led_update():
