@@ -173,14 +173,18 @@
                     return;
                 }
 
+                // Parse the response JSON.
+                const data = await response.json();
+
                 // If the response was successful, update the WiFi status text.
                 document.getElementById("wifiStatus").style.color = "red";
-                document.getElementById("wifiStatus").innerText = `
+                document.getElementById("wifiStatus").innerHTML = `
                     You have submitted the WiFi config to ESP. If the password is correct, it will connect to the WiFi. 
+                    Use the address <a href="http://${data.host}.local">http://${data.host}.local</a> to access the ESP via the same WiFi network.
                     Android phone may not support mDNS, so you may need to use the IP address to access the ESP. 
-                    The IP address is assigned by the router, so you may need to check the router's DHCP client list. 
+                    The IP address is assigned by the router, so you need to check the router's DHCP client list. 
                     It may look like "192.168.x.x".
-                    `;
+                `;
             } catch (error) {
                 console.error("An error occurred:", error);
             }

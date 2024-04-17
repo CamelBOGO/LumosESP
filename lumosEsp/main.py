@@ -34,10 +34,11 @@ ledStatus = 0xffffff
 # ==================================================
 networkMode = 0  # 0: AP, 1: WiFi
 mac = network.WLAN().config("mac")
+host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-AP"
 apPassword = "1234567890"
-wifiSsid = "wifissid"
-wifiPassword = "wifipassword"
+wifiSsid = "TP-LINK_ED469C"
+wifiPassword = "Pi3.14159265"
 
 
 # ==================================================
@@ -75,7 +76,7 @@ async def send_css(req):
 @app.get("/api/wifi")
 async def wifi_get(req):
     print("Getting network mode...")
-    return {"mode": networkMode}, 200
+    return {"mode": networkMode, "host": host}, 200
 
 
 @app.put("/api/wifi")
@@ -88,7 +89,7 @@ async def wifi_post(req):
         wifiSsid = data["ssid"]
         wifiPassword = data["password"]
         networkMode = 1
-        return {"mode": networkMode}, 200
+        return {"mode": networkMode, "host": host}, 200
     else:
         return {"error": "Invalid data"}, 400
 
@@ -150,9 +151,9 @@ async def ap_setup():
 
 async def wifi_connect():
     gc.collect()
+    global host
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
     wlan.config(dhcp_hostname=host)
     wlan.connect(wifiSsid, wifiPassword)
 
