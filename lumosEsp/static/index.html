@@ -15,18 +15,7 @@
                 style="
                     text-align: center;
                     margin: 16px 0px 0px;
-                    background: linear-gradient(
-                        to right,
-                        #ef5350,
-                        #f48fb1,
-                        #7e57c2,
-                        #2196f3,
-                        #26c6da,
-                        #43a047,
-                        #eeff41,
-                        #f9a825,
-                        #ff5722
-                    );
+                    background: linear-gradient(to right, #c33764, #1d2671);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">
@@ -40,7 +29,7 @@
         <div id="selectColour" class="container-fluid" style="max-width: 768px">
             <form>
                 <label for="selectColour">Select a colour:</label>
-                <select id="selectColour">
+                <select id="selectColour" onchange="putColour(event.target.value)">
                     <option selected value="off">Off</option>
                     <option value="red">Red</option>
                     <option value="green">Green</option>
@@ -56,6 +45,18 @@
             <!-- WiFi Status -->
             <p>WiFi Status:</p>
             <p id="wifiStatus">N/A</p>
+
+            <!-- The Form of Submitting the WiFi password -->
+            <div id="wifiFormDiv">
+                <h4>WiFi Configuration</h4>
+                <form id="wifiForm" autocomplete="off">
+                    <fieldset>
+                        <input name="login" placeholder="SSID" />
+                        <input type="password" name="password" placeholder="Password" />
+                        <button type="submit">Submit</button>
+                    </fieldset>
+                </form>
+            </div>
         </div>
     </body>
 
@@ -139,17 +140,54 @@
                     document.getElementById("wifiStatus").innerText = "AP Mode";
                 } else {
                     document.getElementById("wifiStatus").innerText = "WiFi Mode";
+                    // Hide the WiFi form if the device is already connected to a network.
+                    document.getElementById("wifiFormDiv").style.display = "none";
                 }
             } catch (error) {
                 console.error("An error occurred:", error);
             }
         }
 
+        async function handleWifiSubmit(event) {
+            event.preventDefault();
+
+            try {
+                // Get the form data.
+                const formData = new FormData(event.target);
+
+                // Send a PUT request to the server to change the WiFi configuration.
+                const response = await fetch("/api/wifi", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        ssid: formData.get("login"),
+                        password: formData.get("password"),
+                    }),
+                });
+
+                // Check if the response was successful.
+                if (response.status !== 200) {
+                    console.error("Failed to change WiFi configuration");
+                    return;
+                }
+
+                // If the response was successful, update the WiFi status text.
+                document.getElementById("wifiStatus").style.color = "red";
+                document.getElementById("wifiStatus").innerText = `
+                    You have submitted the WiFi config to ESP. If the password is correct, it will connect to the WiFi. 
+                    Android phone may not support mDNS, so you may need to use the IP address to access the ESP. 
+                    The IP address is assigned by the router, so you may need to check the router's DHCP client list. 
+                    It may look like "192.168.x.x".
+                    `;
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
+
         // Main Script
-        document.getElementById("selectColour").addEventListener("change", function (event) {
-            console.log(event.target.value);
-            putColour(event.target.value);
-        });
+        document.getElementById("wifiForm").addEventListener("submit", handleWifiSubmit);
 
         setColourText();
         getWifiStatus();
