@@ -1,18 +1,15 @@
 import asyncio
 from microdot import Microdot, send_file
 import network
-# import esp
 import gc
 from machine import Pin, PWM
 
-# Disable vendor OS debug log.
-# esp.osdebug(None)
 # Run the garbage collector to free up memory.
 gc.collect()
 
 
 # ==================================================
-# Pin Assignments
+# Pin Assignments and Global Variables
 # ==================================================
 rPwm = PWM(Pin(15), freq=1000, duty=1023)
 gPwm = PWM(Pin(2), freq=1000, duty=1023)
@@ -44,6 +41,7 @@ wifiPassword = "Pi3.14159265"
 # ==================================================
 # General Functions
 # ==================================================
+# Map a value from one range to another.
 def map(value, fromRange, toRange):
     (fromLow, fromHigh) = fromRange
     (toLow, toHigh) = toRange
@@ -82,13 +80,19 @@ async def wifi_get(req):
 @app.put("/api/wifi")
 async def wifi_post(req):
     global wifiSsid, wifiPassword, networkMode
+
+    # Get the json data from the request.
     data = req.json
     print(f"Received data: {data}")
+
     # Check if the ssid and password are provided.
     if "ssid" in data and "password" in data:
+        # Get the ssid and password from the data.
         wifiSsid = data["ssid"]
         wifiPassword = data["password"]
+        # Change the network mode to WiFi.
         networkMode = 1
+        # Return the network mode and host name.
         return {"mode": networkMode, "host": host}, 200
     else:
         return {"error": "Invalid data"}, 400
@@ -103,8 +107,12 @@ async def led_get(req):
 @app.put("/api/led")
 async def led_put(req):
     global ledStatus
+
+    # Get the json data from the request.
     data = req.json
     print(f"Setting LED to {data["led"]}...")
+
+    # TO-DO: Check if the data is valid.
     # if isinstance(data["led"], int) and 0x000000 <= color <= 0xffffff:
     ledStatus = colourData.get(data["led"], colourData["default"])
     return {"led": ledStatus}, 200
@@ -113,9 +121,10 @@ async def led_put(req):
 # ==================================================
 # asyncio Functions
 # ==================================================
-# Access Point
+# Function: Access Point
 # https://randomnerdtutorials.com/micropython-esp32-esp8266-access-point-ap/
 async def ap_setup():
+    # Run the garbage collector to free up memory.
     gc.collect()
     # Create an Access Point.
     ap = network.WLAN(network.AP_IF)
@@ -124,23 +133,19 @@ async def ap_setup():
     # Set the AP configuration.
     ap.config(essid=apSsid, authmode=network.AUTH_WPA_WPA2_PSK, password=apPassword)
 
-    while True:
-        if networkMode == 1:
-            break
-
+    # Keep infinite loop when the network mode is 0.
+    while networkMode == 0:
         # While the AP is not active, do nothing.
         if ap.active() == False:
             print("Setting up AP...")
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
         else:
             # Print the success message and the ap config.
             print("Connection successful")
             print(ap.ifconfig())
 
-            while ap.active():
-                if networkMode == 1:
-                    break
-
+            # Keep infinite loop while the AP is active and the network mode is 0.
+            while ap.active() and networkMode == 0:
                 await asyncio.sleep(1)
 
     # If the network mode is changed to WiFi, deactivate the AP.
@@ -149,29 +154,41 @@ async def ap_setup():
     return
 
 
+# Function: Connect WiFi
 async def wifi_connect():
+    # Run the garbage collector to free up memory.
     gc.collect()
+    # Global variables
     global host
+    # Create a WLAN object.
     wlan = network.WLAN(network.STA_IF)
+    # Activate the WLAN object.
     wlan.active(True)
+    # Set the DHCP hostname for mDNS.
     wlan.config(dhcp_hostname=host)
+    # Connect to the WiFi.
     wlan.connect(wifiSsid, wifiPassword)
 
+    # Keep infinite loop when the network mode is 1.
     while True:
+        # While the WiFi is not connected, do nothing.
         if wlan.isconnected() == False:
             print("Connecting to WiFi...")
             await asyncio.sleep(1)
         else:
+            # Print the success message and the wlan config.
             print("Connection successful")
             wlanConfig = wlan.ifconfig()
             host = wlan.config("dhcp_hostname")
             print(
                 f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
 
+            # Keep infinite loop while the WiFi is connected and the network mode is 1.
             while wlan.isconnected():
                 await asyncio.sleep(1)
 
 
+# Function: To determine which network mode to enter, AP or WiFi.
 async def network_control():
     while True:
         if networkMode == 0:
@@ -182,6 +199,7 @@ async def network_control():
             await wifi_connect()
 
 
+# Function: Handle the LED colour changing.
 async def led_update():
     # Create a local variable to store the current LED status.
     myLedStatus = ledStatus
