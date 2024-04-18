@@ -99,6 +99,22 @@ async def wifi_post(req):
         return {"error": "Invalid data"}, 400
 
 
+@app.put("/api/network_mode")
+async def network_mode_put(req):
+    global networkMode
+
+    # Get the json data from the request.
+    data = req.json
+    print(f"Received data: {data}")
+
+    # Check if the mode is provided and valid.
+    if "mode" in data and data["mode"] in [0, 1, 2]:
+        networkMode = data["mode"]
+        return {"mode": networkMode}, 200
+    else:
+        return {"error": "Invalid data"}, 400
+
+
 @app.get("/api/led")
 async def led_get(req):
     print("Getting LED status...")
@@ -149,14 +165,14 @@ async def ap_handler():
             print("Deactivating AP...")
             ap.active(False)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
 
 # Function: Connect WiFi
 async def wifi_handler():
     # Run the garbage collector to free up memory.
     gc.collect()
-    # Create a WLAN object.
+    # Create a WLAN object and setting.
     wlan = network.WLAN(network.STA_IF)
 
     while True:
@@ -164,6 +180,7 @@ async def wifi_handler():
         if networkMode in [1, 2] and not wlan.isconnected():
             # Activate and connect to the WiFi.
             wlan.active(True)
+            wlan.config(dhcp_hostname=host)
             wlan.connect(wifiSsid, wifiPassword)
             while not wlan.isconnected():
                 print("Connecting to WiFi...")
@@ -181,7 +198,7 @@ async def wifi_handler():
             wlan.disconnect()
             wlan.active(False)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
 
 # Function: Handle the LED colour changing.

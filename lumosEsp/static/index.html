@@ -42,13 +42,11 @@
             <p>Current Colour:</p>
             <p id="currentColour">N/A</p>
 
-            <!-- AP Status -->
-            <p>AP Status:</p>
-            <p id="apStatus">N/A</p>
-
             <!-- WiFi Status -->
             <p>WiFi Status:</p>
             <p id="wifiStatus">N/A</p>
+
+            <button id="turnOffApBtn" onclick="turnOffAp()" style="width: 100%; display: none">Turn Off AP</button>
 
             <!-- The Form of Submitting the WiFi password -->
             <div id="wifiFormDiv">
@@ -143,7 +141,11 @@
                 if (data.mode == 0) {
                     document.getElementById("wifiStatus").innerText = "AP Mode";
                 } else {
-                    document.getElementById("wifiStatus").innerText = "WiFi Mode";
+                    if (data.mode == 1) document.getElementById("wifiStatus").innerText = "WiFi Mode";
+                    if (data.mode == 2) {
+                        document.getElementById("wifiStatus").innerText = "AP/WiFi Mode (Turn off AP to save power)";
+                        document.getElementById("turnOffApBtn").style.display = "";
+                    }
                     // Hide the WiFi form if the device is already connected to a network.
                     document.getElementById("wifiFormDiv").style.display = "none";
                 }
@@ -189,6 +191,35 @@
                     The IP address is assigned by the router, so you need to check the router's DHCP client list. 
                     It may look like "192.168.x.x".
                 `;
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
+
+        async function turnOffAp() {
+            try {
+                // Send a PUT request to set the WiFi mode to WiFi only.
+                const response = await fetch("/api/network_mode", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ mode: 1 }),
+                });
+
+                // Check if the response was successful.
+                if (response.status !== 200) {
+                    console.error("Failed to turn off AP");
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Set
+                if (data.mode == 1) {
+                    document.getElementById("wifiStatus").innerText = "WiFi Mode";
+                    document.getElementById("turnOffApBtn").style.display = "none";
+                }
             } catch (error) {
                 console.error("An error occurred:", error);
             }
