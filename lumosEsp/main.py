@@ -36,6 +36,7 @@ apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
 apPassword = "1234567890"
 wifiSsid = "TP-LINK_ED469C"
 wifiPassword = "Pi3.14159265"
+network.hostname(host)
 
 
 # ==================================================
@@ -164,9 +165,6 @@ async def wifi_connect():
     wlan = network.WLAN(network.STA_IF)
     # Activate the WLAN object.
     wlan.active(True)
-    # Set the DHCP hostname for mDNS.
-    # wlan.config(dhcp_hostname=host)
-    network.hostname(host)
     # Connect to the WiFi.
     wlan.connect(wifiSsid, wifiPassword)
 
