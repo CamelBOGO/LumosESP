@@ -29,7 +29,7 @@ ledStatus = 0xffffff
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-networkMode = 0  # 0: AP, 1: WiFi
+networkMode = 0  # 0: AP, 1: WiFi, 2: Both
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
@@ -91,8 +91,8 @@ async def wifi_post(req):
         # Get the ssid and password from the data.
         wifiSsid = data["ssid"]
         wifiPassword = data["password"]
-        # Change the network mode to WiFi.
-        networkMode = 1
+        # Change the network mode to AP/WiFi.
+        networkMode = 2
         # Return the network mode and host name.
         return {"mode": networkMode, "host": host}, 200
     else:
@@ -124,78 +124,72 @@ async def led_put(req):
 # ==================================================
 # Function: Access Point
 # https://randomnerdtutorials.com/micropython-esp32-esp8266-access-point-ap/
-async def ap_setup():
+async def ap_handler():
     # Run the garbage collector to free up memory.
     gc.collect()
-    # Create an Access Point.
+    # Setting of the AP object.
     ap = network.WLAN(network.AP_IF)
-    # Set the AP to be active.
-    ap.active(True)
-    # Set the AP configuration.
     ap.config(essid=apSsid, authmode=network.AUTH_WPA_WPA2_PSK, password=apPassword)
 
-    # Keep infinite loop when the network mode is 0.
-    while networkMode == 0:
-        # While the AP is not active, do nothing.
-        if ap.active() == False:
-            print("Setting up AP...")
-            await asyncio.sleep(1)
+    while True:
+        # If the network mode is 0 or 2, activate the AP.
+        if networkMode == 0 or networkMode == 2:
+            # If the AP is not active, activate the AP. Otherwise, do nothing.
+            if ap.active() == False:
+                # Activate the AP.
+                ap.active(True)
+                while ap.active() == False:
+                    print("Activating AP...")
+                    await asyncio.sleep(1)
+
+                # Print the success message and the ap config.
+                print("AP is activated successfully.")
+                print(ap.ifconfig())
+
+        # If the network mode is 1, deactivate the AP.
         else:
-            # Print the success message and the ap config.
-            print("Connection successful")
-            print(ap.ifconfig())
+            # Only deactivate the AP when the AP is active. Otherwise, do nothing.
+            if ap.active() == True:
+                print("Deactivating AP...")
+                ap.active(False)
 
-            # Keep infinite loop while the AP is active and the network mode is 0.
-            while ap.active() and networkMode == 0:
-                await asyncio.sleep(1)
-
-    # If the network mode is changed to WiFi, deactivate the AP.
-    print("Deactivating AP...")
-    # ap.active(False)
-    return
+        await asyncio.sleep(1)
 
 
 # Function: Connect WiFi
-async def wifi_connect():
+async def wifi_handler():
     # Run the garbage collector to free up memory.
     gc.collect()
-    # Global variables
-    global host
     # Create a WLAN object.
     wlan = network.WLAN(network.STA_IF)
-    # Activate the WLAN object.
-    wlan.active(True)
-    # Connect to the WiFi.
-    wlan.connect(wifiSsid, wifiPassword)
 
-    # Keep infinite loop when the network mode is 1.
     while True:
-        # While the WiFi is not connected, do nothing.
-        if wlan.isconnected() == False:
-            print("Connecting to WiFi...")
-            await asyncio.sleep(1)
+        # If the network mode is 1 or 2, connect to the WiFi.
+        if networkMode == 1 or networkMode == 2:
+            # If the wlan is not connected, connect to the WiFi. Otherwise, do nothing.
+            if wlan.isconnected() == False:
+                # Activate and connect to the WiFi.
+                wlan.active(True)
+                wlan.connect(wifiSsid, wifiPassword)
+                while wlan.isconnected() == False:
+                    print("Connecting to WiFi...")
+                    await asyncio.sleep(1)
+
+                # Print the success message and the wlan config.
+                print("Connection successful")
+                wlanConfig = wlan.ifconfig()
+                print(
+                    f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
+
+        # If the network mode is 0, deactivate the WiFi.
         else:
-            # Print the success message and the wlan config.
-            print("Connection successful")
-            wlanConfig = wlan.ifconfig()
-            host = wlan.config("dhcp_hostname")
-            print(
-                f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
+            # Only deactivate the WiFi when the WiFi is connected. Otherwise, do nothing.
+            if wlan.isconnected() == True:
+                print("Disconnecting WiFi...")
+                wlan.disconnect()
+                wlan.active(False)
 
-            # Keep infinite loop while the WiFi is connected and the network mode is 1.
-            while wlan.isconnected():
-                await asyncio.sleep(1)
-
-
-# Function: To determine which network mode to enter, AP or WiFi.
-async def network_control():
-    while True:
-        if networkMode == 0:
-            print("Now entering AP mode...")
-            await ap_setup()
-        elif networkMode == 1:
-            print("Now entering WiFi mode...")
-            await wifi_connect()
+        await asyncio.sleep(1)
 
 
 # Function: Handle the LED colour changing.
@@ -242,10 +236,11 @@ async def led_update():
 # For asyncio, see: https://github.com/orgs/micropython/discussions/10933
 # and also see: https://docs.micropython.org/en/latest/library/asyncio.html
 async def main():
-    task_network = asyncio.create_task(network_control())
+    task_ap = asyncio.create_task(ap_handler())
+    task_wifi = asyncio.create_task(wifi_handler())
     task_led = asyncio.create_task(led_update())
     task_server = asyncio.create_task(app.run(port=80, debug=True))
-    await asyncio.gather(task_network, task_led, task_server)
+    await asyncio.gather(task_ap, task_wifi, task_led, task_server)
 
 while True:
     asyncio.run(main())
