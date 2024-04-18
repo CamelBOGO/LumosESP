@@ -132,26 +132,22 @@ async def ap_handler():
     ap.config(essid=apSsid, authmode=network.AUTH_WPA_WPA2_PSK, password=apPassword)
 
     while True:
-        # If the network mode is 0 or 2, activate the AP.
-        if networkMode == 0 or networkMode == 2:
-            # If the AP is not active, activate the AP. Otherwise, do nothing.
-            if ap.active() == False:
-                # Activate the AP.
-                ap.active(True)
-                while ap.active() == False:
-                    print("Activating AP...")
-                    await asyncio.sleep(1)
+        # If the network mode is 0 or 2, and the AP is not activated, activate the AP.
+        if networkMode in [0, 2] and not ap.active():
+            # Activate the AP.
+            ap.active(True)
+            while not ap.active():
+                print("Activating AP...")
+                await asyncio.sleep(1)
 
-                # Print the success message and the ap config.
-                print("AP is activated successfully.")
-                print(ap.ifconfig())
+            # Print the success message and the ap config.
+            print("AP is activated successfully.")
+            print(ap.ifconfig())
 
-        # If the network mode is 1, deactivate the AP.
-        else:
-            # Only deactivate the AP when the AP is active. Otherwise, do nothing.
-            if ap.active() == True:
-                print("Deactivating AP...")
-                ap.active(False)
+        # If the network mode is 1, and the AP is activated, deactivate the AP.
+        elif networkMode == 1 and ap.active():
+            print("Deactivating AP...")
+            ap.active(False)
 
         await asyncio.sleep(1)
 
@@ -164,30 +160,26 @@ async def wifi_handler():
     wlan = network.WLAN(network.STA_IF)
 
     while True:
-        # If the network mode is 1 or 2, connect to the WiFi.
-        if networkMode == 1 or networkMode == 2:
-            # If the wlan is not connected, connect to the WiFi. Otherwise, do nothing.
-            if wlan.isconnected() == False:
-                # Activate and connect to the WiFi.
-                wlan.active(True)
-                wlan.connect(wifiSsid, wifiPassword)
-                while wlan.isconnected() == False:
-                    print("Connecting to WiFi...")
-                    await asyncio.sleep(1)
+        # If the network mode is 1 or 2, and the WiFi is not connected, connect to the WiFi.
+        if networkMode in [1, 2] and not wlan.isconnected():
+            # Activate and connect to the WiFi.
+            wlan.active(True)
+            wlan.connect(wifiSsid, wifiPassword)
+            while not wlan.isconnected():
+                print("Connecting to WiFi...")
+                await asyncio.sleep(1)
 
-                # Print the success message and the wlan config.
-                print("Connection successful")
-                wlanConfig = wlan.ifconfig()
-                print(
-                    f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
+            # Print the success message and the wlan config.
+            print("Connection successful")
+            wlanConfig = wlan.ifconfig()
+            print(
+                f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
 
-        # If the network mode is 0, deactivate the WiFi.
-        else:
-            # Only deactivate the WiFi when the WiFi is connected. Otherwise, do nothing.
-            if wlan.isconnected() == True:
-                print("Disconnecting WiFi...")
-                wlan.disconnect()
-                wlan.active(False)
+        # If the network mode is 0, and the WiFi is connected, disconnect the WiFi.
+        elif networkMode == 0 and wlan.isconnected():
+            print("Disconnecting WiFi...")
+            wlan.disconnect()
+            wlan.active(False)
 
         await asyncio.sleep(1)
 
