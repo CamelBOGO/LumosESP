@@ -29,10 +29,10 @@ ledStatus = 0xffffff
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-networkMode = 0  # 0: AP, 1: WiFi
+networkMode = 1  # 0: AP, 1: WiFi
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
-apSsid = "ESP32-AP"
+apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
 apPassword = "1234567890"
 wifiSsid = "TP-LINK_ED469C"
 wifiPassword = "Pi3.14159265"
@@ -166,6 +166,7 @@ async def wifi_connect():
     wlan.active(True)
     # Set the DHCP hostname for mDNS.
     wlan.config(dhcp_hostname=host)
+    network.hostname(host)
     # Connect to the WiFi.
     wlan.connect(wifiSsid, wifiPassword)
 
