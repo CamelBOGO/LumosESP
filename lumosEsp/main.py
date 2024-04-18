@@ -29,7 +29,7 @@ ledStatus = 0xffffff
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-networkMode = 1  # 0: AP, 1: WiFi
+networkMode = 0  # 0: AP, 1: WiFi
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
@@ -150,7 +150,7 @@ async def ap_setup():
 
     # If the network mode is changed to WiFi, deactivate the AP.
     print("Deactivating AP...")
-    ap.active(False)
+    # ap.active(False)
     return
 
 
@@ -165,7 +165,7 @@ async def wifi_connect():
     # Activate the WLAN object.
     wlan.active(True)
     # Set the DHCP hostname for mDNS.
-    wlan.config(dhcp_hostname=host)
+    # wlan.config(dhcp_hostname=host)
     network.hostname(host)
     # Connect to the WiFi.
     wlan.connect(wifiSsid, wifiPassword)
