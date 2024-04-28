@@ -31,3 +31,6 @@ import micropython
 micropython.mem_info()
 
 wlan.disconnect()
+
+# Rename touch_test.py to main.py
+os.rename("touch_test.py", "main.py")
