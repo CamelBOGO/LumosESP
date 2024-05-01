@@ -3,6 +3,7 @@ from microdot import Microdot, send_file
 import network
 import gc
 from machine import Pin, PWM
+from neopixel import NeoPixel
 
 # Run the garbage collector to free up memory.
 gc.collect()
@@ -11,10 +12,21 @@ gc.collect()
 # ==================================================
 # Pin Assignments and Global Variables
 # ==================================================
-rPwm = PWM(Pin(15), freq=1000, duty=1023)
-gPwm = PWM(Pin(2), freq=1000, duty=1023)
-bPwm = PWM(Pin(4), freq=1000, duty=1023)
+# rPwm = PWM(Pin(15), freq=1000, duty=1023)
+# gPwm = PWM(Pin(2), freq=1000, duty=1023)
+# bPwm = PWM(Pin(4), freq=1000, duty=1023)
 
+# NeoPixel
+numOfLeds = 4
+ledPin = Pin(0, Pin.OUT)
+neoPixels = NeoPixel(ledPin, numOfLeds)
+
+# Initialise all neopixels to white.
+for i in range(numOfLeds):
+    neoPixels[i] = (255, 255, 255)
+neoPixels.write()
+
+# Colour Data
 colourData = {
     "off": 0x000000,
     "red":  0xff0000,
@@ -23,6 +35,7 @@ colourData = {
     "default": 0xffffff
 }
 
+# Initial LED Status
 ledStatus = 0xffffff
 
 
@@ -225,9 +238,16 @@ async def led_update():
             bCurrent += 0 if bTarget == bCurrent else (1 if bTarget > bCurrent else -1)
 
             # Convert the current RGB values to the PWM duty cycle values, and update the duty.
-            rPwm.duty(int(map(rCurrent, (0, 255), (0, 1023))))
-            gPwm.duty(int(map(gCurrent, (0, 255), (0, 1023))))
-            bPwm.duty(int(map(bCurrent, (0, 255), (0, 1023))))
+            # rPwm.duty(int(map(rCurrent, (0, 255), (0, 1023))))
+            # gPwm.duty(int(map(gCurrent, (0, 255), (0, 1023))))
+            # bPwm.duty(int(map(bCurrent, (0, 255), (0, 1023))))
+
+            # Update the NeoPixel colour.
+            for i in range(numOfLeds):
+                neoPixels[i] = (rCurrent, gCurrent, bCurrent)
+
+            # Write the NeoPixel data.
+            neoPixels.write()
 
             # Update the current LED status.
             myLedStatus = (rCurrent << 16) | (gCurrent << 8) | bCurrent
