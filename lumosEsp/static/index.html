@@ -31,10 +31,10 @@
                 <label for="selectColour">Select a colour:</label>
                 <select id="selectColour" onchange="putColour(event.target.value)">
                     <option selected value="off">Off</option>
-                    <option value="red">Red</option>
-                    <option value="green">Green</option>
-                    <option value="blue">Blue</option>
-                    <option value="white">White</option>
+                    <option value="0xFF0000">Red</option>
+                    <option value="0x00FF00">Green</option>
+                    <option value="0x0000FF">Blue</option>
+                    <option value="0xFFFF00">Yellow</option>
                 </select>
             </form>
 
@@ -95,6 +95,9 @@
 
         async function putColour(colour) {
             try {
+                // Convert the colour hex string to a number.
+                colour = parseInt(colour);
+
                 // Send a PUT request to the server to change the LED colour.
                 const response = await fetch("/api/led", {
                     method: "PUT",
