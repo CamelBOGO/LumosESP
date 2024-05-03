@@ -165,10 +165,12 @@ async def led_put(req):
     data = req.json
     print(f"Setting LED to {data["led"]}...")
 
-    # TO-DO: Check if the data is valid.
-    # if isinstance(data["led"], int) and 0x000000 <= color <= 0xffffff:
-    ledStatus = colourData.get(data["led"], colourData["default"])
-    return {"led": ledStatus}, 200
+    # TO-DO: Check if the data is existed and valid.
+    if "led" in data and isinstance(data["led"], int) and 0 <= data["led"] <= 0xffffff:
+        ledStatus = data["led"]
+        return {"led": ledStatus}, 200
+    else:
+        return {"error": "Invalid data"}, 400
 
 
 # ==================================================
