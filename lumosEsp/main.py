@@ -2,7 +2,7 @@ import asyncio
 from microdot import Microdot, send_file
 import network
 import gc
-from machine import Pin, PWM
+from machine import Pin
 from neopixel import NeoPixel
 
 # Run the garbage collector to free up memory.
@@ -12,10 +12,6 @@ gc.collect()
 # ==================================================
 # Pin Assignments and Global Variables
 # ==================================================
-# rPwm = PWM(Pin(15), freq=1000, duty=1023)
-# gPwm = PWM(Pin(2), freq=1000, duty=1023)
-# bPwm = PWM(Pin(4), freq=1000, duty=1023)
-
 # NeoPixel
 numOfLeds = 4
 ledPin = Pin(0, Pin.OUT)
@@ -236,11 +232,6 @@ async def led_update():
             rCurrent += 0 if rTarget == rCurrent else (1 if rTarget > rCurrent else -1)
             gCurrent += 0 if gTarget == gCurrent else (1 if gTarget > gCurrent else -1)
             bCurrent += 0 if bTarget == bCurrent else (1 if bTarget > bCurrent else -1)
-
-            # Convert the current RGB values to the PWM duty cycle values, and update the duty.
-            # rPwm.duty(int(map(rCurrent, (0, 255), (0, 1023))))
-            # gPwm.duty(int(map(gCurrent, (0, 255), (0, 1023))))
-            # bPwm.duty(int(map(bCurrent, (0, 255), (0, 1023))))
 
             # Update the NeoPixel colour.
             for i in range(numOfLeds):
