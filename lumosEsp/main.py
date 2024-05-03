@@ -111,7 +111,10 @@ async def send_css(req):
 @app.get("/api/wifi")
 async def wifi_get(req):
     print("Getting network mode...")
-    return {"mode": networkMode, "host": host}, 200
+    if networkMode == 0:
+        return {"mode": networkMode, "host": host}, 200
+    else:
+        return {"mode": networkMode, "host": host, "ip": network.WLAN().ifconfig()[0]}, 200
 
 
 @app.put("/api/wifi")
@@ -130,7 +133,7 @@ async def wifi_post(req):
         # Change the network mode to AP/WiFi.
         networkMode = 2
         # Return the network mode and host name.
-        return {"mode": networkMode, "host": host}, 200
+        return {"mode": networkMode, "host": host, "ip": network.WLAN().ifconfig()[0]}, 200
     else:
         return {"error": "Invalid data"}, 400
 
