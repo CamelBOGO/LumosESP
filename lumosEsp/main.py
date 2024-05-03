@@ -58,6 +58,33 @@ def map(value, fromRange, toRange):
     return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow
 
 
+# Convert a hex colour to RGB.
+def hex_to_rgb(value):
+    # Check if the input is an integer.
+    if not isinstance(value, int):
+        raise TypeError('Input must be an integer')
+    # Check if the input is in the valid range.
+    value = value & 0xffffff
+    # Convert and return the RGB colour.
+    r = (value >> 16) & 0xff
+    g = (value >> 8) & 0xff
+    b = value & 0xff
+    return r, g, b
+
+
+# Convert RGB to a hex colour.
+def rgb_to_hex(r, g, b):
+    # Check if the inputs are integers.
+    if not all(isinstance(i, int) for i in (r, g, b)):
+        raise TypeError("Inputs must be integers")
+    # Check if the inputs are in the valid range.
+    r = max(0, min(r, 255))
+    g = max(0, min(g, 255))
+    b = max(0, min(b, 255))
+    # Convert and return the hex colour.
+    return (r << 16) | (g << 8) | b
+
+
 # ==================================================
 # Pages
 # ==================================================
@@ -219,14 +246,10 @@ async def led_update():
         # If the current LED status is not equal to the target LED status, update the LED status.
         while myLedStatus != ledStatus:
             # Get the target RGB values.
-            rTarget = (ledStatus >> 16) & 0xff
-            gTarget = (ledStatus >> 8) & 0xff
-            bTarget = ledStatus & 0xff
+            rTarget, gTarget, bTarget = hex_to_rgb(ledStatus)
 
             # Get the current RGB values.
-            rCurrent = (myLedStatus >> 16) & 0xff
-            gCurrent = (myLedStatus >> 8) & 0xff
-            bCurrent = myLedStatus & 0xff
+            rCurrent, gCurrent, bCurrent = hex_to_rgb(myLedStatus)
 
             # Update the current RGB values to the target RGB values by 1 step.
             rCurrent += 0 if rTarget == rCurrent else (1 if rTarget > rCurrent else -1)
@@ -241,7 +264,7 @@ async def led_update():
             neoPixels.write()
 
             # Update the current LED status.
-            myLedStatus = (rCurrent << 16) | (gCurrent << 8) | bCurrent
+            myLedStatus = rgb_to_hex(rCurrent, gCurrent, bCurrent)
 
             # When the LED colour is changing, use a short delay to make the colour changing smoothly.
             await asyncio.sleep(0.01)
