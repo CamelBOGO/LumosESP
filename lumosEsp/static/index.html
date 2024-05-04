@@ -33,15 +33,15 @@
                     <option selected value="off">Off</option>
                     <option value="0xFFFFFF">White</option>
                     <option value="0xFF0000">Red</option>
-                    <option value="0x00FF00">Green</option>
-                    <option value="0x0000FF">Blue</option>
-                    <option value="0xFFFF00">Yellow</option>
                     <option value="0xFFA500">Orange</option>
+                    <option value="0xFFD700">Gold</option>
+                    <option value="0xFFFF00">Yellow</option>
+                    <option value="0x00FF00">Green</option>
                     <option value="0x00FFFF">Cyan</option>
+                    <option value="0x0000FF">Blue</option>
                     <option value="0xFF00FF">Magenta</option>
                     <option value="0xFFC0CB">Pink</option>
-                    <option value="0x8B4513">Brown</option>
-                    <option value="0xFFD700">Gold</option>
+                    <option value="cycle">Cycle</option>
                 </select>
             </form>
 
@@ -92,7 +92,8 @@
 
                 // Set the current colour text.
                 if (data.led) {
-                    document.getElementById("currentColour").innerText = decToHexColour(data.led);
+                    if (data.led === "cycle") document.getElementById("currentColour").innerText = "Cycle";
+                    else document.getElementById("currentColour").innerText = decToHexColour(data.led);
                 } else {
                     console.error("Invalid response from server.");
                 }
@@ -101,10 +102,12 @@
             }
         }
 
-        async function putColour(colour) {
+        async function putColour(colourData) {
             try {
-                // Convert the colour hex string to a number.
-                colour = parseInt(colour);
+                if (colourData !== "cycle") {
+                    // Convert the colour hex string to a number.
+                    colourData = parseInt(colourData);
+                }
 
                 // Send a PUT request to the server to change the LED colour.
                 const response = await fetch("/api/led", {
@@ -112,7 +115,7 @@
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ led: colour }),
+                    body: JSON.stringify({ led: colourData }),
                 });
 
                 // Check if the response was successful.
@@ -125,7 +128,8 @@
 
                 // Set the current colour text.
                 if (data.led) {
-                    document.getElementById("currentColour").innerText = decToHexColour(data.led);
+                    if (data.led === "cycle") document.getElementById("currentColour").innerText = "Cycle";
+                    else document.getElementById("currentColour").innerText = decToHexColour(data.led);
                 } else {
                     console.error("Invalid response from server.");
                 }
