@@ -242,6 +242,35 @@ async def wifi_handler():
         await asyncio.sleep(2)
 
 
+# Function: Handle the LED colour cycling.
+async def led_colour_cycle():
+    while True:
+        while ledStatus == "cycle":
+            # Get the current RGB values.
+            r, g, b = hex_to_rgb(myLedStatus)
+
+            # Update the current RGB values to the next colour.
+            r = 255 if r == 0 else r - 1
+            g = 255 if g == 0 else g - 1
+            b = 255 if b == 0 else b - 1
+
+            # Update the NeoPixel colour.
+            for i in range(numOfLeds):
+                neoPixels[i] = (r, g, b)
+
+            # Write the NeoPixel data.
+            neoPixels.write()
+
+            # Update the current LED status.
+            myLedStatus = rgb_to_hex(r, g, b)
+
+            # When the LED colour is cycling, use a short delay to make the colour cycling smoothly.
+            await asyncio.sleep(0.01)
+
+        # If the current LED status is not equal to the target LED status, check again in 1 second.
+        await asyncio.sleep(1)
+
+
 # Function: Handle the LED colour changing.
 async def led_update():
     # Create a local variable to store the current LED status.
