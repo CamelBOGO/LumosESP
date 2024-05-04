@@ -38,7 +38,7 @@ ledStatus = 0xffffff
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-networkMode = 0  # 0: AP, 1: WiFi, 2: Both
+networkMode = 1  # 0: AP, 1: WiFi, 2: Both
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
@@ -168,8 +168,12 @@ async def led_put(req):
     data = req.json
     print(f"Setting LED to {data["led"]}...")
 
-    # TO-DO: Check if the data is existed and valid.
+    # Check if the data is existed and valid.
     if "led" in data and isinstance(data["led"], int) and 0 <= data["led"] <= 0xffffff:
+        ledStatus = data["led"]
+        return {"led": ledStatus}, 200
+    elif "led" in data and data["led"] == "cycle":
+        # Currently, there is no specific handling for the "cycle" status.
         ledStatus = data["led"]
         return {"led": ledStatus}, 200
     else:
@@ -244,45 +248,53 @@ async def wifi_handler():
 
 # Function: Handle the LED colour cycling.
 async def led_colour_cycle():
-    while True:
-        while ledStatus == "cycle":
-            # Get the current RGB values.
-            r, g, b = hex_to_rgb(myLedStatus)
+    # Define the colour cycle order.
+    cycleOrder = [0xff0000, 0xffff00, 0x00ff00, 0x00ffff, 0x0000ff, 0xff00ff]
+    myColourIndex = 0
+    # If the current LED status is still "cycle", keep the LED colour cycling.
+    while ledStatus == "cycle":
+        # Get the current RGB values.
+        rCurrent, gCurrent, bCurrent = neoPixels[0]
 
-            # Update the current RGB values to the next colour.
-            r = 255 if r == 0 else r - 1
-            g = 255 if g == 0 else g - 1
-            b = 255 if b == 0 else b - 1
+        if rgb_to_hex(rCurrent, gCurrent, bCurrent) == cycleOrder[myColourIndex]:
+            # Update the colour index.
+            myColourIndex += 1
+            if myColourIndex >= len(cycleOrder):
+                myColourIndex = 0
+        else:
+            # Get the target RGB values.
+            rTarget, gTarget, bTarget = hex_to_rgb(cycleOrder[myColourIndex])
+
+            # Update the current RGB values to the target RGB values by 1 step.
+            rCurrent += 0 if rTarget == rCurrent else (1 if rTarget > rCurrent else -1)
+            gCurrent += 0 if gTarget == gCurrent else (1 if gTarget > gCurrent else -1)
+            bCurrent += 0 if bTarget == bCurrent else (1 if bTarget > bCurrent else -1)
 
             # Update the NeoPixel colour.
             for i in range(numOfLeds):
-                neoPixels[i] = (r, g, b)
+                neoPixels[i] = (rCurrent, gCurrent, bCurrent)
 
             # Write the NeoPixel data.
             neoPixels.write()
 
-            # Update the current LED status.
-            myLedStatus = rgb_to_hex(r, g, b)
-
-            # When the LED colour is cycling, use a short delay to make the colour cycling smoothly.
-            await asyncio.sleep(0.01)
-
-        # If the current LED status is not equal to the target LED status, check again in 1 second.
-        await asyncio.sleep(1)
+        # When the LED colour is cycling, use a short delay to make the colour cycling smoothly.
+        await asyncio.sleep(0.01)
 
 
 # Function: Handle the LED colour changing.
 async def led_update():
-    # Create a local variable to store the current LED status.
-    myLedStatus = ledStatus
-
     while True:
+        # Get the current LED status.
+        myLedStatus = rgb_to_hex(*neoPixels[0])
         # If the current LED status is not equal to the target LED status, update the LED status.
         while myLedStatus != ledStatus:
-            # Get the target RGB values.
-            rTarget, gTarget, bTarget = hex_to_rgb(ledStatus)
+            # If the target LED status is "cycle", start the LED colour cycling.
+            if ledStatus == "cycle":
+                await led_colour_cycle()
+                break
 
-            # Get the current RGB values.
+            # Get the target and current RGB values.
+            rTarget, gTarget, bTarget = hex_to_rgb(ledStatus)
             rCurrent, gCurrent, bCurrent = hex_to_rgb(myLedStatus)
 
             # Update the current RGB values to the target RGB values by 1 step.
