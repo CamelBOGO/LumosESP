@@ -85,12 +85,41 @@ def rgb_to_hex(r, g, b):
     return (r << 16) | (g << 8) | b
 
 
+# Convert HSV to RGB.
+def hsv_to_rgb(h, s, v):
+    # If hue is out of range, rotate it back in range.
+    h = h % 360
+
+    # Check if the inputs are in the valid range.
+    if not (0 <= h <= 360 and 0 <= s <= 1 and 0 <= v <= 1):
+        print(h, s, v)
+        raise ValueError("Inputs are out of range")
+
+    # Convert and return the RGB colour.
+    h = h / 60
+    i = int(h)
+    f = h - i
+    p = v * (1 - s)
+    q = v * (1 - s * f)
+    t = v * (1 - s * (1 - f))
+    r, g, b = {
+        0: (v, t, p),
+        1: (q, v, p),
+        2: (p, v, t),
+        3: (p, q, v),
+        4: (t, p, v),
+        5: (v, p, q)
+    }[i % 6]
+
+    # Convert the RGB values to the integer format.
+    return int(r * 255), int(g * 255), int(b * 255)
+
+
 # ==================================================
 # Pages
 # ==================================================
 # For the symbol of @, see: https://ithelp.ithome.com.tw/articles/10200763
 # For async/await, see: https://ithelp.ithome.com.tw/articles/10262385
-
 # Create an instance of the Microdot class.
 app = Microdot()
 
@@ -172,7 +201,7 @@ async def led_put(req):
     if "led" in data and isinstance(data["led"], int) and 0 <= data["led"] <= 0xffffff:
         ledStatus = data["led"]
         return {"led": ledStatus}, 200
-    elif "led" in data and data["led"] == "cycle":
+    elif "led" in data and (data["led"] == "cycle" or data["led"] == "rainbow"):
         # Currently, there is no specific handling for the "cycle" status.
         ledStatus = data["led"]
         return {"led": ledStatus}, 200
@@ -281,6 +310,24 @@ async def led_colour_cycle():
         await asyncio.sleep(0.01)
 
 
+# Function: Handle the LED rainbow effect.
+async def led_rainbow():
+    while ledStatus == "rainbow":
+        # Loop through the hue values (0 to 360).
+        for hue in range(0, 360, 1):
+            # If the LED status is not "rainbow", break the loop.
+            if ledStatus != "rainbow":
+                return
+
+            # Update the NeoPixel colour.
+            for ledNum in range(numOfLeds):
+                # Add the hue value to different LEDs, the added value is based on the LED number: hue + 360*(ledNum/numOfLeds)
+                neoPixels[ledNum] = hsv_to_rgb(hue + (360 * ledNum / numOfLeds), 1, 1)
+            neoPixels.write()
+
+            await asyncio.sleep(0.01)
+
+
 # Function: Handle the LED colour changing.
 async def led_update():
     while True:
@@ -288,9 +335,12 @@ async def led_update():
         myLedStatus = rgb_to_hex(*neoPixels[0])
         # If the current LED status is not equal to the target LED status, update the LED status.
         while myLedStatus != ledStatus:
-            # If the target LED status is "cycle", start the LED colour cycling.
+            # If the target LED status is "cycle" or "rainbow", start the LED cycling.
             if ledStatus == "cycle":
                 await led_colour_cycle()
+                break
+            elif ledStatus == "rainbow":
+                await led_rainbow()
                 break
 
             # Get the target and current RGB values.
