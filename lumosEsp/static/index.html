@@ -107,9 +107,14 @@
 
         async function putColour(colourData) {
             try {
-                if (colourData !== "cycle" || colourData !== "rainbow") {
-                    // Convert the colour hex string to a number.
-                    colourData = parseInt(colourData);
+                // if (colourData !== "cycle" && colourData !== "rainbow") {
+                //     // Convert the colour hex string to a number.
+                //     colourData = parseInt(colourData);
+                // }
+
+                // Check if it is a 0x hex string.
+                if (colourData.toString().startsWith("0x")) {
+                    colourData = parseInt(colourData, 16);
                 }
 
                 // Send a PUT request to the server to change the LED colour.
