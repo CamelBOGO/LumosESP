@@ -48,11 +48,11 @@
             </form>
 
             <!-- The Text of Current Colour -->
-            <p>Current Colour:</p>
+            <h6>Current Colour:</h6>
             <p id="currentColour">N/A</p>
 
             <!-- WiFi Status -->
-            <p>WiFi Status:</p>
+            <h6>WiFi Status:</h6>
             <p id="wifiStatus">N/A</p>
             <p id="ipAddress">N/A</p>
 
@@ -60,7 +60,7 @@
 
             <!-- The Form of Submitting the WiFi password -->
             <div id="wifiFormDiv">
-                <h4>WiFi Configuration</h4>
+                <h6>WiFi Configuration</h6>
                 <form id="wifiForm" autocomplete="off">
                     <fieldset>
                         <input name="login" placeholder="SSID" />
@@ -74,11 +74,63 @@
 
     <!-- Script Here -->
     <script>
+        // Function: Convert Decimal to Hexadecimal Colour String
         function decToHexColour(dec) {
             return "#" + dec.toString(16).padStart(6, "0");
         }
 
-        async function setColourText() {
+        // Function: Set Colour Text
+        function setColourText(text) {
+            if (text === "cycle") document.getElementById("currentColour").innerText = "Cycle";
+            else if (text === "rainbow") document.getElementById("currentColour").innerText = "Rainbow";
+            else document.getElementById("currentColour").innerText = decToHexColour(text);
+        }
+
+        // Function: Set Selected Colour
+        function setSelectedColour(value) {
+            console.log("Selected colour:", value);
+            // If the value is a number, convert it to a hex string "0xRRGGBB" in upper case.
+            if (typeof value === "number") value = "0x" + value.toString(16).toUpperCase().padStart(6, "0");
+            // If the value is a string, it should be "cycle" or "rainbow".
+            else if (typeof value === "string" && (value === "cycle" || value === "rainbow"))
+                document.getElementById("selectColour").value = value;
+        }
+
+        // Function: Set WiFi Status Text
+        function setWifiStatusText(mode, ip) {
+            console.log("WiFi mode:", mode);
+            // Set the current WiFi status text according to the mode.
+            let wifiStatusElement = document.getElementById("wifiStatus");
+            let ipAddressElement = document.getElementById("ipAddress");
+            let turnOffApBtnElement = document.getElementById("turnOffApBtn");
+            let wifiFormDivElement = document.getElementById("wifiFormDiv");
+
+            switch (mode) {
+                case 0:
+                    // Show AP mode.
+                    wifiStatusElement.innerText = "AP Mode";
+                    break;
+                case 1:
+                    // Show WiFi mode and IP address; Hide the form.
+                    wifiStatusElement.innerText = "WiFi Mode";
+                    ipAddressElement.innerHTML = `<a href="http://${ip}">http://${ip}</a>`;
+                    wifiFormDivElement.style.display = "none";
+                    break;
+                case 2:
+                    // Show AP/WiFi mode and IP address; Hide the form; Show the turn off AP button.
+                    wifiStatusElement.innerText = "AP/WiFi Mode (Turn off AP to save power)";
+                    ipAddressElement.innerHTML = `<a href="http://${ip}">http://${ip}</a>`;
+                    turnOffApBtnElement.style.display = "";
+                    wifiFormDivElement.style.display = "none";
+                    break;
+                default:
+                    wifiStatusElement.innerText = "Invalid Mode";
+                    break;
+            }
+        }
+
+        // Function: Fetch Current Colour from Server
+        async function getCurrentColour() {
             try {
                 // Fetch the current LED colour.
                 const response = await fetch("/api/led");
@@ -94,24 +146,17 @@
 
                 // Set the current colour text.
                 if (data.led) {
-                    if (data.led === "cycle") document.getElementById("currentColour").innerText = "Cycle";
-                    else if (data.led === "rainbow") document.getElementById("currentColour").innerText = "Rainbow";
-                    else document.getElementById("currentColour").innerText = decToHexColour(data.led);
-                } else {
-                    console.error("Invalid response from server.");
-                }
+                    setColourText(data.led);
+                    setSelectedColour(data.led);
+                } else console.error("Invalid response from server.");
             } catch (error) {
                 console.error("An error occurred:", error);
             }
         }
 
+        // Function: PUT Colour to Server
         async function putColour(colourData) {
             try {
-                // if (colourData !== "cycle" && colourData !== "rainbow") {
-                //     // Convert the colour hex string to a number.
-                //     colourData = parseInt(colourData);
-                // }
-
                 // Check if it is a 0x hex string.
                 if (colourData.toString().startsWith("0x")) {
                     colourData = parseInt(colourData, 16);
@@ -132,21 +177,18 @@
                     return;
                 }
 
+                // Parse the response JSON.
                 const data = await response.json();
 
                 // Set the current colour text.
-                if (data.led) {
-                    if (data.led === "cycle") document.getElementById("currentColour").innerText = "Cycle";
-                    else if (data.led === "rainbow") document.getElementById("currentColour").innerText = "Rainbow";
-                    else document.getElementById("currentColour").innerText = decToHexColour(data.led);
-                } else {
-                    console.error("Invalid response from server.");
-                }
+                if (data.led) setColourText(data.led);
+                else console.error("Invalid response from server.");
             } catch (error) {
                 console.error("An error occurred:", error);
             }
         }
 
+        // Function: Fetch WiFi Status from Server
         async function getWifiStatus() {
             try {
                 // Fetch the current WiFi status.
@@ -161,31 +203,14 @@
                 // Parse the response JSON.
                 const data = await response.json();
 
-                // Set the current WiFi status text.
-                if (data.mode == 0) {
-                    document.getElementById("wifiStatus").innerText = "AP Mode";
-                } else {
-                    if (data.mode == 1) {
-                        document.getElementById("wifiStatus").innerText = "WiFi Mode";
-                        document.getElementById(
-                            "ipAddress"
-                        ).innerHTML = `<a href="http://${data.ip}">http://${data.ip}</a>`;
-                    }
-                    if (data.mode == 2) {
-                        document.getElementById("wifiStatus").innerText = "AP/WiFi Mode (Turn off AP to save power)";
-                        document.getElementById(
-                            "ipAddress"
-                        ).innerHTML = `<a href="http://${data.ip}">http://${data.ip}</a>`;
-                        document.getElementById("turnOffApBtn").style.display = "";
-                    }
-                    // Hide the WiFi form if the device is already connected to a network.
-                    document.getElementById("wifiFormDiv").style.display = "none";
-                }
+                // Set the current WiFi status text according to the mode.
+                setWifiStatusText(data.mode, data.ip);
             } catch (error) {
                 console.error("An error occurred:", error);
             }
         }
 
+        // Function: Submit WiFi ssid and password to server.
         async function handleWifiSubmit(event) {
             event.preventDefault();
 
@@ -229,6 +254,7 @@
             }
         }
 
+        // Function: Turn off AP mode.
         async function turnOffAp() {
             try {
                 // Send a PUT request to set the WiFi mode to WiFi only.
@@ -246,22 +272,20 @@
                     return;
                 }
 
+                // Parse the response JSON.
                 const data = await response.json();
 
-                // Set
-                if (data.mode == 1) {
-                    document.getElementById("wifiStatus").innerText = "WiFi Mode";
-                    document.getElementById("turnOffApBtn").style.display = "none";
-                }
+                // Set the current WiFi status text according to the mode.
+                setWifiStatusText(data.mode, "0.0.0.0");
             } catch (error) {
                 console.error("An error occurred:", error);
             }
         }
 
-        // Main Script
+        // Main Script ========================================================
         document.getElementById("wifiForm").addEventListener("submit", handleWifiSubmit);
 
-        setColourText();
+        getCurrentColour();
         getWifiStatus();
     </script>
 </html>
