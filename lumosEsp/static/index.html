@@ -88,12 +88,18 @@
 
         // Function: Set Selected Colour
         function setSelectedColour(value) {
-            console.log("Selected colour:", value);
+            // Currently not implemented.
             // If the value is a number, convert it to a hex string "0xRRGGBB" in upper case.
-            if (typeof value === "number") value = "0x" + value.toString(16).toUpperCase().padStart(6, "0");
+            // if (typeof value === "number") {
+            //     value = "0x" + value.toString(16).toUpperCase().padStart(6, "0");
+            //     document.getElementById("selectColour").value = value;
+            //     console.log("Set selected colour:", value);
+            // }
             // If the value is a string, it should be "cycle" or "rainbow".
-            else if (typeof value === "string" && (value === "cycle" || value === "rainbow"))
-                document.getElementById("selectColour").value = value;
+            // else if (typeof value === "string" && (value === "cycle" || value === "rainbow")) {
+            //     document.getElementById("selectColour").value = value;
+            //     console.log("Set selected colour:", value);
+            // }
         }
 
         // Function: Set WiFi Status Text
