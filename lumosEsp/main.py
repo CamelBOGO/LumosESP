@@ -22,15 +22,6 @@ for i in range(numOfLeds):
     neoPixels[i] = (255, 255, 255)
 neoPixels.write()
 
-# Colour Data
-colourData = {
-    "off": 0x000000,
-    "red":  0xff0000,
-    "green": 0x00ff00,
-    "blue": 0x0000ff,
-    "default": 0xffffff
-}
-
 # Initial LED Status
 ledStatus = 0xffffff
 
@@ -140,10 +131,12 @@ async def send_css(req):
 @app.get("/api/wifi")
 async def wifi_get(req):
     print("Getting network mode...")
-    if networkMode == 0:
-        return {"mode": networkMode, "host": host}, 200
-    else:
-        return {"mode": networkMode, "host": host, "ip": network.WLAN().ifconfig()[0]}, 200
+    return {
+        "mode": networkMode,
+        "host": host,
+        # Only return the IP address when the network mode is not AP.
+        "ip": network.WLAN().ifconfig()[0] if networkMode != 0 else None
+    }, 200
 
 
 @app.put("/api/wifi")
@@ -201,7 +194,7 @@ async def led_put(req):
     if "led" in data and isinstance(data["led"], int) and 0 <= data["led"] <= 0xffffff:
         ledStatus = data["led"]
         return {"led": ledStatus}, 200
-    elif "led" in data and (data["led"] == "cycle" or data["led"] == "rainbow"):
+    elif "led" in data and (data["led"] in ["cycle", "rainbow"]):
         # Currently, there is no specific handling for the "cycle" status.
         ledStatus = data["led"]
         return {"led": ledStatus}, 200
