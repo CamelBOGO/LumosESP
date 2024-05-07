@@ -7,20 +7,28 @@
         <meta charset="UTF-8" />
         <link rel="icon" href="data:," />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <style>
+            @media (prefers-color-scheme: light) {
+                .gradient_header {
+                    background: linear-gradient(to right, #7e1537, #1d2671);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+            }
+            @media (prefers-color-scheme: dark) {
+                .gradient_header {
+                    background: linear-gradient(to right, #c33764, #952bff);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+            }
+        </style>
     </head>
     <body>
         <!-- The Title of The Website -->
         <div style="display: flex; justify-content: center">
-            <h1
-                style="
-                    text-align: center;
-                    margin: 16px 0px 0px;
-                    background: linear-gradient(to right, #c33764, #1d2671);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                ">
-                LumosESP
-            </h1>
+            <h1 class="gradient_header" style="text-align: center; margin: 16px 0px 0px">LumosESP</h1>
             <hr />
         </div>
         <hr />
