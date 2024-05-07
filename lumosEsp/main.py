@@ -29,7 +29,7 @@ ledStatus = 0xffffff
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-networkMode = 1  # 0: AP, 1: WiFi, 2: Both
+networkMode = 0  # 0: AP, 1: WiFi, 2: Both
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
