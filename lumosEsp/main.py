@@ -251,7 +251,7 @@ async def wifi_handler():
             wlan.connect(wifiSsid, wifiPassword)
             while not wlan.isconnected():
                 print("Connecting to WiFi...")
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
 
             # Print the success message and the wlan config.
             print("Connection successful")
@@ -271,20 +271,23 @@ async def wifi_handler():
 # Function: Turn off all LEDs smoothly and no matter what colour they are.
 async def led_off():
     done_flag = False
+    step = 2
     while done_flag == False:
         done_flag = True
         # Scan through all the LEDs and reduce the RGB values by 1.
         for i in range(numOfLeds):
+            # Get the current RGB values.
             r, g, b = neoPixels[i]
-            if r > 0:
-                r -= 1
-                done_flag = False
-            if g > 0:
-                g -= 1
-                done_flag = False
-            if b > 0:
-                b -= 1
-                done_flag = False
+
+            # Update the RGB values by 1 step.
+            r = max(r - step, 0)
+            g = max(g - step, 0)
+            b = max(b - step, 0)
+
+            # Update the done flag.
+            done_flag = False if any([r, g, b]) else True
+
+            # Update the NeoPixel colour.
             neoPixels[i] = (r, g, b)
 
         neoPixels.write()
