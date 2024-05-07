@@ -328,19 +328,23 @@ async def led_colour_cycle():
 
 # Function: Handle the LED rainbow effect.
 async def led_rainbow():
+    val = 0.01
     while ledStatus == "rainbow":
         # Loop through the hue values (0 to 360).
         for hue in range(0, 360, 1):
             # If the LED status is not "rainbow", break the loop.
             if ledStatus != "rainbow":
-                await led_off()
                 return
 
             # Update the NeoPixel colour.
             for ledNum in range(numOfLeds):
                 # Add the hue value to different LEDs, the added value is based on the LED number: hue + 360*(ledNum/numOfLeds)
-                neoPixels[ledNum] = hsv_to_rgb(hue + (360 * ledNum / numOfLeds), 1, 1)
+                neoPixels[ledNum] = hsv_to_rgb(hue + (360 * ledNum / numOfLeds), 1, val)
             neoPixels.write()
+
+            # Increment val for brightness, but do not exceed 1.
+            if val < 1:
+                val = min(val + 0.01, int(1))
 
             await asyncio.sleep(0.01)
 
@@ -359,6 +363,7 @@ async def led_update():
             elif ledStatus == "rainbow":
                 await led_off()
                 await led_rainbow()
+                await led_off()
                 break
 
             # Get the target and current RGB values.
