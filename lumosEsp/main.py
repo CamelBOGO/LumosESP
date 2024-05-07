@@ -29,7 +29,7 @@ ledStatus = 0xffffff
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-networkMode = 0  # 0: AP, 1: WiFi, 2: Both
+networkMode = 1  # 0: AP, 1: WiFi, 2: Both
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
@@ -268,6 +268,29 @@ async def wifi_handler():
         await asyncio.sleep(2)
 
 
+# Function: Turn off all LEDs smoothly and no matter what colour they are.
+async def led_off():
+    done_flag = False
+    while done_flag == False:
+        done_flag = True
+        # Scan through all the LEDs and reduce the RGB values by 1.
+        for i in range(numOfLeds):
+            r, g, b = neoPixels[i]
+            if r > 0:
+                r -= 1
+                done_flag = False
+            if g > 0:
+                g -= 1
+                done_flag = False
+            if b > 0:
+                b -= 1
+                done_flag = False
+            neoPixels[i] = (r, g, b)
+
+        neoPixels.write()
+        await asyncio.sleep(0.01)
+
+
 # Function: Handle the LED colour cycling.
 async def led_colour_cycle():
     # Define the colour cycle order.
@@ -310,6 +333,7 @@ async def led_rainbow():
         for hue in range(0, 360, 1):
             # If the LED status is not "rainbow", break the loop.
             if ledStatus != "rainbow":
+                await led_off()
                 return
 
             # Update the NeoPixel colour.
@@ -333,6 +357,7 @@ async def led_update():
                 await led_colour_cycle()
                 break
             elif ledStatus == "rainbow":
+                await led_off()
                 await led_rainbow()
                 break
 
