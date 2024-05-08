@@ -14,7 +14,7 @@ gc.collect()
 # ==================================================
 # NeoPixel
 numOfLeds = 5
-ledPin = Pin(0, Pin.OUT)
+ledPin = Pin(4, Pin.OUT)
 neoPixels = NeoPixel(ledPin, numOfLeds)
 
 # Initialise all neopixels to white.
@@ -237,6 +237,8 @@ async def ap_handler():
 
 # Function: Connect WiFi
 async def wifi_handler():
+    # Global variables
+    global networkMode, host, wifiSsid, wifiPassword
     # Run the garbage collector to free up memory.
     gc.collect()
     # Create a WLAN object and setting.
@@ -249,15 +251,24 @@ async def wifi_handler():
             wlan.active(True)
             wlan.config(dhcp_hostname=host)
             wlan.connect(wifiSsid, wifiPassword)
+
+            # The loop to wait for the WiFi connection.
+            attempts = 0
             while not wlan.isconnected():
+                if attempts >= 10:
+                    print("Connection failed. Switching to AP mode...")
+                    networkMode = 0
+                    break
                 print("Connecting to WiFi...")
+                attempts += 1
                 await asyncio.sleep(2)
 
             # Print the success message and the wlan config.
-            print("Connection successful")
-            wlanConfig = wlan.ifconfig()
-            print(
-                f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
+            if wlan.isconnected():
+                print("Connection successful")
+                wlanConfig = wlan.ifconfig()
+                print(
+                    f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
 
         # If the network mode is 0, and the WiFi is connected, disconnect the WiFi.
         elif networkMode == 0 and wlan.isconnected():

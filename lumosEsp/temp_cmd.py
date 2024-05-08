@@ -19,6 +19,7 @@ os.mkdir("static/js")
 
 # Move the file to the new folder
 os.rename("index.html", "static/index.html")
+os.rename("index.min.html", "static/index.html")
 os.rename("pico.indigo.min.css", "static/css/pico.indigo.min.css")
 
 # cd to the new folder
