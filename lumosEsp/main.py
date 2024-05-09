@@ -2,7 +2,7 @@ import asyncio
 from microdot import Microdot, send_file
 import network
 import gc
-from machine import Pin
+from machine import Pin, TouchPad
 from neopixel import NeoPixel
 
 # Run the garbage collector to free up memory.
@@ -12,6 +12,11 @@ gc.collect()
 # ==================================================
 # Pin Assignments and Global Variables
 # ==================================================
+# Touch Pad
+touchPin = TouchPad(Pin(15))
+touchValue = touchPin.read()
+print(f"Touch: {touchValue}")
+
 # NeoPixel
 numOfLeds = 5
 ledPin = Pin(4, Pin.OUT)
@@ -24,6 +29,7 @@ neoPixels.write()
 
 # Initial LED Status
 ledStatus = 0xffffff
+ledStatusList = [0xffffff, 0xff0000, 0xffff00, 0x00ff00, 0x00ffff, 0x0000ff, 0xff00ff, "cycle", "rainbow"]
 
 
 # ==================================================
@@ -406,6 +412,30 @@ async def led_update():
         await asyncio.sleep(1)
 
 
+# Function: Touch Handler
+async def touch_handler():
+    global ledStatus
+    isTouched = False
+    touchThreshold = 350
+    while True:
+        # Get the touch value.
+        touchValue = touchPin.read()
+
+        # Print the touch value and the LED status.
+        print(f"Touch: {touchValue}")
+
+        if touchValue <= touchThreshold and not isTouched:
+            # Change the LED status to the next one.
+            ledStatus = ledStatusList[(ledStatusList.index(ledStatus) + 1) % len(ledStatusList)]
+            print(f"Touch changed LED to: {ledStatus}.")
+            isTouched = True
+        elif touchValue > touchThreshold and isTouched:
+            isTouched = False
+
+        # Wait for 0.5 second before checking the touch value again.
+        await asyncio.sleep(0.2)
+
+
 # ==================================================
 # Main
 # ==================================================
@@ -415,8 +445,9 @@ async def main():
     task_ap = asyncio.create_task(ap_handler())
     task_wifi = asyncio.create_task(wifi_handler())
     task_led = asyncio.create_task(led_update())
+    task_touch = asyncio.create_task(touch_handler())
     task_server = asyncio.create_task(app.run(port=80, debug=True))
-    await asyncio.gather(task_ap, task_wifi, task_led, task_server)
+    await asyncio.gather(task_ap, task_wifi, task_led, task_touch, task_server)
 
 while True:
     asyncio.run(main())
