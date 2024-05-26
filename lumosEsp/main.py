@@ -19,6 +19,7 @@ print(f"Touch: {touchValue}")
 
 # ADC for MIC
 mic = ADC(Pin(34), atten=ADC.ATTN_11DB)
+micValueMax = 0  # The global variable to store the amplitude. It will be reduced slowly.
 
 # NeoPixel
 numOfLeds = 5
@@ -441,10 +442,22 @@ async def touch_handler():
 
 # Function: ADC for MIC
 async def mic_handler():
+    global micValueMax
+    step = 65535 // 20
     while True:
         # Get the MIC value.
         micValue = mic.read_u16()
-        print(f"Mic: {micValue}")
+
+        # Update the MIC value to the global variable.
+        if micValue >= micValueMax:
+            micValueMax = micValue
+        # Else, reduce the MIC value slowly.
+        else:
+            micValueMax = max(micValueMax - step, 0)
+
+        # Print the MIC value.
+        print(f"MicMax: {micValueMax}")
+
         await asyncio.sleep(0.1)
 
 
