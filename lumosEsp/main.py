@@ -87,6 +87,8 @@ def rgb_to_hex(r, g, b):
 
 
 # Convert HSV to RGB.
+# Input: h, s, v where h is in the range 0-360, s and v are in the range 0-1.
+# Output: (r, g, b) where r, g, b are integers in the range 0-255.
 def hsv_to_rgb(h, s, v):
     # If hue is out of range, rotate it back in range.
     h = h % 360
@@ -114,6 +116,43 @@ def hsv_to_rgb(h, s, v):
 
     # Convert the RGB values to the integer format.
     return int(r * 255), int(g * 255), int(b * 255)
+
+
+# Convert RGB to HSV.
+# Input: r, g, b where r, g, b are integers in the range 0-255.
+# Output: (h, s, v) where h is in the range 0-360, s and v are in the range 0-1.
+def rgb_to_hsv(r, g, b):
+    # Check if the inputs are integers.
+    if not all(isinstance(i, int) for i in (r, g, b)):
+        raise TypeError("Inputs must be integers")
+
+    # Check if the inputs are in the valid range.
+    if not all(0 <= i <= 255 for i in (r, g, b)):
+        raise ValueError("Inputs are out of range")
+
+    # Convert and return the HSV colour.
+    r, g, b = r / 255, g / 255, b / 255
+    cmax = max(r, g, b)
+    cmin = min(r, g, b)
+    delta = cmax - cmin
+
+    if delta == 0:
+        h = 0
+    elif cmax == r:
+        h = 60 * (((g - b) / delta) % 6)
+    elif cmax == g:
+        h = 60 * (((b - r) / delta) + 2)
+    elif cmax == b:
+        h = 60 * (((r - g) / delta) + 4)
+
+    if cmax == 0:
+        s = 0
+    else:
+        s = delta / cmax
+
+    v = cmax
+
+    return h, s, v
 
 
 # ==================================================
