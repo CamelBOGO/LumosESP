@@ -354,36 +354,27 @@ async def led_off():
         await asyncio.sleep(0.01)
 
 
-# Function: Handle the LED colour cycling.
+# Function: Handle the LED colour cycling. Handle in HSV format.
 async def led_colour_cycle():
-    # Define the colour cycle order.
-    cycleOrder = [0xff0000, 0xffff00, 0x00ff00, 0x00ffff, 0x0000ff, 0xff00ff]
-    myColourIndex = 0
-    # If the current LED status is still "cycle", keep the LED colour cycling.
+    # Get the current RGB values.
+    rCurrent, gCurrent, bCurrent = neoPixels[0]
+    h, s, v = rgb_to_hsv(rCurrent, gCurrent, bCurrent)
+
     while ledStatus == "cycle":
-        # Get the current RGB values.
-        rCurrent, gCurrent, bCurrent = neoPixels[0]
+        # Do the colour cycling.
+        h = (h + 1) % 360
+        s = min(s + 0.01, 1)
+        v = min(v + 0.01, 1)
 
-        if rgb_to_hex(rCurrent, gCurrent, bCurrent) == cycleOrder[myColourIndex]:
-            # Update the colour index.
-            myColourIndex += 1
-            if myColourIndex >= len(cycleOrder):
-                myColourIndex = 0
-        else:
-            # Get the target RGB values.
-            rTarget, gTarget, bTarget = hex_to_rgb(cycleOrder[myColourIndex])
+        # Convert the HSV values back to RGB values.
+        rCurrent, gCurrent, bCurrent = hsv_to_rgb(h, s, v)
 
-            # Update the current RGB values to the target RGB values by 1 step.
-            rCurrent += 0 if rTarget == rCurrent else (1 if rTarget > rCurrent else -1)
-            gCurrent += 0 if gTarget == gCurrent else (1 if gTarget > gCurrent else -1)
-            bCurrent += 0 if bTarget == bCurrent else (1 if bTarget > bCurrent else -1)
+        # Update the NeoPixel colour.
+        for i in range(numOfLeds):
+            neoPixels[i] = (rCurrent, gCurrent, bCurrent)
 
-            # Update the NeoPixel colour.
-            for i in range(numOfLeds):
-                neoPixels[i] = (rCurrent, gCurrent, bCurrent)
-
-            # Write the NeoPixel data.
-            neoPixels.write()
+        # Write the NeoPixel data.
+        neoPixels.write()
 
         # When the LED colour is cycling, use a short delay to make the colour cycling smoothly.
         await asyncio.sleep(0.01)
