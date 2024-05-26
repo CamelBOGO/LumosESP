@@ -96,7 +96,10 @@ def hsv_to_rgb(h, s, v):
     # Check if the inputs are in the valid range.
     if not (0 <= h <= 360 and 0 <= s <= 1 and 0 <= v <= 1):
         print(h, s, v)
-        raise ValueError("Inputs are out of range")
+        # Fix the inputs to the valid range.
+        h = max(0, min(h, 360))
+        s = max(0, min(s, 1))
+        v = max(0, min(v, 1))
 
     # Convert and return the RGB colour.
     h = h / 60
@@ -128,7 +131,10 @@ def rgb_to_hsv(r, g, b):
 
     # Check if the inputs are in the valid range.
     if not all(0 <= i <= 255 for i in (r, g, b)):
-        raise ValueError("Inputs are out of range")
+        # Fix the inputs to the valid range.
+        r = max(0, min(r, 255))
+        g = max(0, min(g, 255))
+        b = max(0, min(b, 255))
 
     # Convert and return the HSV colour.
     r, g, b = r / 255, g / 255, b / 255
@@ -405,6 +411,8 @@ async def led_rainbow():
 
 # Function: Handle the LED colour changing.
 async def led_update():
+    global ledStatus
+
     while True:
         # Get the current LED status.
         myLedStatus = rgb_to_hex(*neoPixels[0])
@@ -420,24 +428,27 @@ async def led_update():
                 await led_off()
                 break
 
-            # Get the target and current RGB values.
-            rTarget, gTarget, bTarget = hex_to_rgb(ledStatus)
-            rCurrent, gCurrent, bCurrent = hex_to_rgb(myLedStatus)
+            # Get the target and current HSV values.
+            hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledStatus))
+            hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatus))
 
-            # Update the current RGB values to the target RGB values by 1 step.
-            rCurrent += 0 if rTarget == rCurrent else (1 if rTarget > rCurrent else -1)
-            gCurrent += 0 if gTarget == gCurrent else (1 if gTarget > gCurrent else -1)
-            bCurrent += 0 if bTarget == bCurrent else (1 if bTarget > bCurrent else -1)
+            # Update the current HSV values to the target HSV values by 1 step.
+            hCurrent = hTarget if abs(hTarget - hCurrent) < 1 \
+                else (hCurrent + 1 if hTarget > hCurrent else hCurrent - 1)
+            sCurrent = sTarget if abs(sTarget - sCurrent) < 0.015 \
+                else (sCurrent + 0.01 if sTarget > sCurrent else sCurrent - 0.01)
+            vCurrent = vTarget if abs(vTarget - vCurrent) < 0.015 \
+                else (vCurrent + 0.01 if vTarget > vCurrent else vCurrent - 0.01)
 
             # Update the NeoPixel colour.
             for i in range(numOfLeds):
-                neoPixels[i] = (rCurrent, gCurrent, bCurrent)
+                neoPixels[i] = hsv_to_rgb(hCurrent, sCurrent, vCurrent)
 
             # Write the NeoPixel data.
             neoPixels.write()
 
             # Update the current LED status.
-            myLedStatus = rgb_to_hex(rCurrent, gCurrent, bCurrent)
+            myLedStatus = rgb_to_hex(*hsv_to_rgb(hCurrent, sCurrent, vCurrent))
 
             # When the LED colour is changing, use a short delay to make the colour changing smoothly.
             await asyncio.sleep(0.01)
