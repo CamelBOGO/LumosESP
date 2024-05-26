@@ -20,6 +20,7 @@ print(f"Touch: {touchValue}")
 # ADC for MIC
 mic = ADC(Pin(34), atten=ADC.ATTN_11DB)
 micValueMax = 0  # The global variable to store the amplitude. It will be reduced slowly.
+inAudioMode = True  # Set to True to enable the audio mode.
 
 # NeoPixel
 numOfLeds = 5
@@ -411,13 +412,13 @@ async def led_rainbow():
 
 # Function: Handle the LED colour changing.
 async def led_update():
-    global ledStatus
+    global ledStatus, inAudioMode, micValueMax
 
     while True:
         # Get the current LED status.
         myLedStatus = rgb_to_hex(*neoPixels[0])
         # If the current LED status is not equal to the target LED status, update the LED status.
-        while myLedStatus != ledStatus:
+        while myLedStatus != ledStatus or inAudioMode:
             # If the target LED status is "cycle" or "rainbow", start the LED cycling.
             if ledStatus == "cycle":
                 await led_colour_cycle()
@@ -431,6 +432,10 @@ async def led_update():
             # Get the target and current HSV values.
             hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledStatus))
             hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatus))
+
+            if inAudioMode:
+                vTarget = micValueMax / 65535
+                vCurrent = vTarget
 
             # Update the current HSV values to the target HSV values by 1 step.
             hCurrent = hTarget if abs(hTarget - hCurrent) < 1 \
@@ -484,22 +489,20 @@ async def touch_handler():
 # Function: ADC for MIC
 async def mic_handler():
     global micValueMax
-    step = 65535 // 20
+    step = 65535 // 50
     while True:
-        # Get the MIC value.
-        micValue = mic.read_u16()
+        if inAudioMode:
+            # Get the MIC value.
+            micValue = mic.read_u16()
 
-        # Update the MIC value to the global variable.
-        if micValue >= micValueMax:
-            micValueMax = micValue
-        # Else, reduce the MIC value slowly.
-        else:
-            micValueMax = max(micValueMax - step, 0)
+            # Update the MIC value to the global variable.
+            if micValue >= micValueMax:
+                micValueMax = micValue
+            # Else, reduce the MIC value slowly.
+            else:
+                micValueMax = max(micValueMax - step, 0)
 
-        # Print the MIC value.
-        print(f"MicMax: {micValueMax}")
-
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.01)
 
 
 # ==================================================
