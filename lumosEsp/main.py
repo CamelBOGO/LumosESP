@@ -2,7 +2,7 @@ import asyncio
 from microdot import Microdot, send_file
 import network
 import gc
-from machine import Pin, TouchPad
+from machine import Pin, TouchPad, ADC
 from neopixel import NeoPixel
 
 # Run the garbage collector to free up memory.
@@ -16,6 +16,9 @@ gc.collect()
 touchPin = TouchPad(Pin(15))
 touchValue = touchPin.read()
 print(f"Touch: {touchValue}")
+
+# ADC for MIC
+mic = ADC(Pin(34), atten=ADC.ATTN_11DB)
 
 # NeoPixel
 numOfLeds = 5
@@ -422,7 +425,7 @@ async def touch_handler():
         touchValue = touchPin.read()
 
         # Print the touch value and the LED status.
-        print(f"Touch: {touchValue}")
+        # print(f"Touch: {touchValue}")
 
         if touchValue <= touchThreshold and not isTouched:
             # Change the LED status to the next one.
@@ -436,6 +439,15 @@ async def touch_handler():
         await asyncio.sleep(0.2)
 
 
+# Function: ADC for MIC
+async def mic_handler():
+    while True:
+        # Get the MIC value.
+        micValue = mic.read_u16()
+        print(f"Mic: {micValue}")
+        await asyncio.sleep(0.1)
+
+
 # ==================================================
 # Main
 # ==================================================
@@ -446,8 +458,9 @@ async def main():
     task_wifi = asyncio.create_task(wifi_handler())
     task_led = asyncio.create_task(led_update())
     task_touch = asyncio.create_task(touch_handler())
+    task_mic = asyncio.create_task(mic_handler())
     task_server = asyncio.create_task(app.run(port=80, debug=True))
-    await asyncio.gather(task_ap, task_wifi, task_led, task_touch, task_server)
+    await asyncio.gather(task_ap, task_wifi, task_led, task_touch, task_mic, task_server)
 
 while True:
     asyncio.run(main())
