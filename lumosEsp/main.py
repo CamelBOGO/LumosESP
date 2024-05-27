@@ -1,12 +1,23 @@
-import asyncio
+from neopixel import NeoPixel
+from machine import Pin, TouchPad, ADC
 from microdot import Microdot, send_file
+import asyncio
 import network
 import gc
-from machine import Pin, TouchPad, ADC
-from neopixel import NeoPixel
 
 # Run the garbage collector to free up memory.
 gc.collect()
+# ==================================================
+# WiFi and Device Settings
+# ==================================================
+networkMode = 0  # 0: AP, 1: WiFi, 2: Both
+mac = network.WLAN().config("mac")
+host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
+apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
+apPassword = "1234567890"
+wifiSsid = "TP-LINK_ED469C"
+wifiPassword = "Pi3.14159265"
+network.hostname(host)
 
 
 # ==================================================
@@ -37,29 +48,8 @@ ledStatusList = [0xffffff, 0xff0000, 0xffff00, 0x00ff00, 0x00ffff, 0x0000ff, 0xf
 
 
 # ==================================================
-# WiFi and Device Settings
-# ==================================================
-gc.collect()
-networkMode = 0  # 0: AP, 1: WiFi, 2: Both
-mac = network.WLAN().config("mac")
-host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
-apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
-apPassword = "1234567890"
-wifiSsid = "TP-LINK_ED469C"
-wifiPassword = "Pi3.14159265"
-network.hostname(host)
-
-
-# ==================================================
 # General Functions
 # ==================================================
-# Map a value from one range to another.
-def map(value, fromRange, toRange):
-    (fromLow, fromHigh) = fromRange
-    (toLow, toHigh) = toRange
-    return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow
-
-
 # Convert a hex colour to RGB.
 def hex_to_rgb(value):
     # Check if the input is an integer.
@@ -96,7 +86,6 @@ def hsv_to_rgb(h, s, v):
 
     # Check if the inputs are in the valid range.
     if not (0 <= h <= 360 and 0 <= s <= 1 and 0 <= v <= 1):
-        print(h, s, v)
         # Fix the inputs to the valid range.
         h = max(0, min(h, 360))
         s = max(0, min(s, 1))
@@ -186,7 +175,6 @@ async def send_css(req):
 # ==================================================
 @app.get("/api/wifi")
 async def wifi_get(req):
-    print("Getting network mode...")
     return {
         "mode": networkMode,
         "host": host,
@@ -201,7 +189,6 @@ async def wifi_post(req):
 
     # Get the json data from the request.
     data = req.json
-    print(f"Received data: {data}")
 
     # Check if the ssid and password are provided.
     if "ssid" in data and "password" in data:
@@ -222,7 +209,6 @@ async def network_mode_put(req):
 
     # Get the json data from the request.
     data = req.json
-    print(f"Received data: {data}")
 
     # Check if the mode is provided and valid.
     if "mode" in data and data["mode"] in [0, 1, 2]:
@@ -234,7 +220,6 @@ async def network_mode_put(req):
 
 @app.get("/api/led")
 async def led_get(req):
-    print("Getting LED status...")
     return {"led": ledTargetRgb}, 200
 
 
@@ -244,7 +229,6 @@ async def led_put(req):
 
     # Get the json data from the request.
     data = req.json
-    print(f"Setting LED to {data["led"]}...")
 
     # Check if the data is existed and valid.
     if "led" in data and isinstance(data["led"], int) and 0 <= data["led"] <= 0xffffff:
@@ -312,7 +296,7 @@ async def wifi_handler():
             attempts = 0
             while not wlan.isconnected():
                 if attempts >= 10:
-                    print("Connection failed. Switching to AP mode...")
+                    # print("Connection failed. Switching to AP mode...")
                     networkMode = 0
                     break
                 print("Connecting to WiFi...")
@@ -328,7 +312,6 @@ async def wifi_handler():
 
         # If the network mode is 0, and the WiFi is connected, disconnect the WiFi.
         elif networkMode == 0 and wlan.isconnected():
-            print("Disconnecting WiFi...")
             wlan.disconnect()
             wlan.active(False)
 
@@ -358,6 +341,49 @@ async def led_off():
             neoPixels[i] = (r, g, b)
 
         neoPixels.write()
+        await asyncio.sleep(0.01)
+
+
+async def led_single():
+    global ledTargetRgb, inAudioMode, micValueMax
+
+    # Get the current LED status.
+    myLedStatusRgb = rgb_to_hex(*neoPixels[0])
+    hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatusRgb))
+
+    # Check if the current LED status is off.
+    if myLedStatusRgb == 0:
+        # If yes, use the target LED status, and set the brightness to 0.
+        hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
+        vCurrent = 0
+
+    # If it is still in single colour mode, update the target HSV values.
+    while isinstance(ledTargetRgb, int):  # If it is still an integer, that means it is still an RGB value.
+        # Update the target HSV values to prevent the LED status from changing during the audio mode.
+        hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
+
+        # If in audio mode, use the value from the mic_handler.
+        if inAudioMode:
+            vTarget = micValueMax / 65535
+            vCurrent = vTarget
+
+        # Update the current HSV values to the target HSV values by 1 or 0.01 step.
+        # If the difference is less than the step, set the current value to the target value directly.
+        # Otherwise, increase or decrease the current value to get closer to the target value.
+        hCurrent = hTarget if abs(hTarget - hCurrent) < 1 \
+            else (hCurrent + 1 if hTarget > hCurrent else hCurrent - 1)
+        sCurrent = sTarget if abs(sTarget - sCurrent) < 0.015 \
+            else (sCurrent + 0.01 if sTarget > sCurrent else sCurrent - 0.01)
+        vCurrent = vTarget if abs(vTarget - vCurrent) < 0.015 \
+            else (vCurrent + 0.01 if vTarget > vCurrent else vCurrent - 0.01)
+
+        # Update and write the NeoPixel colour.
+        for i in range(numOfLeds):
+            rgb = hsv_to_rgb(hCurrent, sCurrent, vCurrent)
+            neoPixels[i] = rgb
+        neoPixels.write()
+
+        # When the LED colour is changing, use a short delay to make the colour changing smoothly.
         await asyncio.sleep(0.01)
 
 
@@ -411,7 +437,7 @@ async def led_rainbow():
 
 
 # Function: Handle the LED colour changing.
-async def led_update():
+async def led_handler():
     global ledTargetRgb, inAudioMode, micValueMax
 
     while True:
@@ -424,43 +450,9 @@ async def led_update():
             await led_rainbow()
             await led_off()
             continue
-
-        # Get the current LED status.
-        myLedStatusRgb = rgb_to_hex(*neoPixels[0])
-        hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatusRgb))
-        # Get the target and current HSV values.
-        hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
-
-        # If the current LED status is not equal to the target LED status, update the LED status.
-        while hCurrent != hTarget or sCurrent != sTarget or vCurrent != vTarget or inAudioMode:
-            # If the target LED status is changed to a string, break the loop.
-            if isinstance(ledTargetRgb, str):
-                break
-            # Update the target HSV values to prevent the LED status from changing during the audio mode.
-            hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
-
-            # If in audio mode, use the value from the mic_handler.
-            if inAudioMode:
-                vTarget = micValueMax / 65535
-                vCurrent = vTarget
-
-            # Update the current HSV values to the target HSV values by 1 step.
-            hCurrent = hTarget if abs(hTarget - hCurrent) < 1 \
-                else (hCurrent + 1 if hTarget > hCurrent else hCurrent - 1)
-            sCurrent = sTarget if abs(sTarget - sCurrent) < 0.015 \
-                else (sCurrent + 0.01 if sTarget > sCurrent else sCurrent - 0.01)
-            vCurrent = vTarget if abs(vTarget - vCurrent) < 0.015 \
-                else (vCurrent + 0.01 if vTarget > vCurrent else vCurrent - 0.01)
-
-            # print(f"HSV Current: {hCurrent}, {sCurrent}, {vCurrent}")
-
-            # Update and write the NeoPixel colour.
-            for i in range(numOfLeds):
-                neoPixels[i] = hsv_to_rgb(hCurrent, sCurrent, vCurrent)
-            neoPixels.write()
-
-            # When the LED colour is changing, use a short delay to make the colour changing smoothly.
-            await asyncio.sleep(0.01)
+        else:
+            await led_single()
+            continue
 
         # If the current LED status is equal to the target LED status, check again in 1 second.
         await asyncio.sleep(1)
@@ -475,14 +467,11 @@ async def touch_handler():
         # Get the touch value.
         touchValue = touchPin.read()
 
-        # Print the touch value and the LED status.
-        # print(f"Touch: {touchValue}")
-
         if touchValue <= touchThreshold and not isTouched:
             # Change the LED status to the next one.
             ledTargetRgb = ledStatusList[(ledStatusList.index(ledTargetRgb) + 1) % len(ledStatusList)]
 
-            print(f"Touch changed LED to: {ledTargetRgb}.")
+            # print(f"Touch changed LED to: {ledTargetRgb}.")
             isTouched = True
         elif touchValue > touchThreshold and isTouched:
             isTouched = False
@@ -494,20 +483,31 @@ async def touch_handler():
 # Function: ADC for MIC
 async def mic_handler():
     global micValueMax
-    step = 65535 // 50
+    dymamic_range = 1  # Initialize with a small value
+    decay_rate = 0.95  # Adjust this value to change the rate of decay
     while True:
         if inAudioMode:
             # Get the MIC value.
             micValue = mic.read_u16()
 
+            # # Update the dynamic range if necessary
+            # if micValue > dymamic_range:
+            #     dymamic_range = micValue
+            # # Else, reduce the dynamic range slowly.
+            # else:
+            #     dymamic_range = max(int(dymamic_range - 100), 1)
+
+            # # Remap the value according to the dynamic range
+            # micValue = int((micValue / dymamic_range) * 65535)
+
             # Update the MIC value to the global variable.
-            if micValue >= micValueMax:
+            if micValue > micValueMax:
                 micValueMax = micValue
             # Else, reduce the MIC value slowly.
             else:
-                micValueMax = max(micValueMax - step, 0)
+                micValueMax = max(int(micValueMax * decay_rate), 0)
 
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.005)
 
 
 # ==================================================
@@ -518,7 +518,7 @@ async def mic_handler():
 async def main():
     task_ap = asyncio.create_task(ap_handler())
     task_wifi = asyncio.create_task(wifi_handler())
-    task_led = asyncio.create_task(led_update())
+    task_led = asyncio.create_task(led_handler())
     task_touch = asyncio.create_task(touch_handler())
     task_mic = asyncio.create_task(mic_handler())
     task_server = asyncio.create_task(app.run(port=80, debug=True))
@@ -526,5 +526,4 @@ async def main():
 
 while True:
     asyncio.run(main())
-    print("ERROR stopped.")
     pass
