@@ -433,6 +433,7 @@ async def led_update():
             hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledStatus))
             hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatus))
 
+            # If in audio mode, use the value from the mic_handler.
             if inAudioMode:
                 vTarget = micValueMax / 65535
                 vCurrent = vTarget
