@@ -15,7 +15,6 @@ gc.collect()
 # Touch Pad
 touchPin = TouchPad(Pin(15))
 touchValue = touchPin.read()
-print(f"Touch: {touchValue}")
 
 # ADC for MIC
 mic = ADC(Pin(34), atten=ADC.ATTN_11DB)
@@ -33,13 +32,14 @@ for i in range(numOfLeds):
 neoPixels.write()
 
 # Initial LED Status
-ledStatus = 0xffffff
+ledTargetRgb = 0xffffff
 ledStatusList = [0xffffff, 0xff0000, 0xffff00, 0x00ff00, 0x00ffff, 0x0000ff, 0xff00ff, "cycle", "rainbow"]
 
 
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
+gc.collect()
 networkMode = 0  # 0: AP, 1: WiFi, 2: Both
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
@@ -235,12 +235,12 @@ async def network_mode_put(req):
 @app.get("/api/led")
 async def led_get(req):
     print("Getting LED status...")
-    return {"led": ledStatus}, 200
+    return {"led": ledTargetRgb}, 200
 
 
 @app.put("/api/led")
 async def led_put(req):
-    global ledStatus
+    global ledTargetRgb
 
     # Get the json data from the request.
     data = req.json
@@ -248,12 +248,12 @@ async def led_put(req):
 
     # Check if the data is existed and valid.
     if "led" in data and isinstance(data["led"], int) and 0 <= data["led"] <= 0xffffff:
-        ledStatus = data["led"]
-        return {"led": ledStatus}, 200
+        ledTargetRgb = data["led"]
+        return {"led": ledTargetRgb}, 200
     elif "led" in data and (data["led"] in ["cycle", "rainbow"]):
         # Currently, there is no specific handling for the "cycle" status.
-        ledStatus = data["led"]
-        return {"led": ledStatus}, 200
+        ledTargetRgb = data["led"]
+        return {"led": ledTargetRgb}, 200
     else:
         return {"error": "Invalid data"}, 400
 
@@ -367,7 +367,7 @@ async def led_colour_cycle():
     rCurrent, gCurrent, bCurrent = neoPixels[0]
     h, s, v = rgb_to_hsv(rCurrent, gCurrent, bCurrent)
 
-    while ledStatus == "cycle":
+    while ledTargetRgb == "cycle":
         # Do the colour cycling.
         h = (h + 1) % 360
         s = min(s + 0.01, 1)
@@ -390,11 +390,11 @@ async def led_colour_cycle():
 # Function: Handle the LED rainbow effect.
 async def led_rainbow():
     val = 0.01
-    while ledStatus == "rainbow":
+    while ledTargetRgb == "rainbow":
         # Loop through the hue values (0 to 360).
         for hue in range(0, 360, 1):
             # If the LED status is not "rainbow", break the loop.
-            if ledStatus != "rainbow":
+            if ledTargetRgb != "rainbow":
                 return
 
             # Update the NeoPixel colour.
@@ -412,26 +412,32 @@ async def led_rainbow():
 
 # Function: Handle the LED colour changing.
 async def led_update():
-    global ledStatus, inAudioMode, micValueMax
+    global ledTargetRgb, inAudioMode, micValueMax
 
     while True:
-        # Get the current LED status.
-        myLedStatus = rgb_to_hex(*neoPixels[0])
-        # If the current LED status is not equal to the target LED status, update the LED status.
-        while myLedStatus != ledStatus or inAudioMode:
-            # If the target LED status is "cycle" or "rainbow", start the LED cycling.
-            if ledStatus == "cycle":
-                await led_colour_cycle()
-                break
-            elif ledStatus == "rainbow":
-                await led_off()
-                await led_rainbow()
-                await led_off()
-                break
+        # If the target LED status is "cycle" or "rainbow", start the LED cycling.
+        if ledTargetRgb == "cycle":
+            await led_colour_cycle()
+            continue
+        elif ledTargetRgb == "rainbow":
+            await led_off()
+            await led_rainbow()
+            await led_off()
+            continue
 
-            # Get the target and current HSV values.
-            hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledStatus))
-            hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatus))
+        # Get the current LED status.
+        myLedStatusRgb = rgb_to_hex(*neoPixels[0])
+        hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatusRgb))
+        # Get the target and current HSV values.
+        hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
+
+        # If the current LED status is not equal to the target LED status, update the LED status.
+        while hCurrent != hTarget or sCurrent != sTarget or vCurrent != vTarget or inAudioMode:
+            # If the target LED status is changed to a string, break the loop.
+            if isinstance(ledTargetRgb, str):
+                break
+            # Update the target HSV values to prevent the LED status from changing during the audio mode.
+            hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
 
             # If in audio mode, use the value from the mic_handler.
             if inAudioMode:
@@ -446,15 +452,12 @@ async def led_update():
             vCurrent = vTarget if abs(vTarget - vCurrent) < 0.015 \
                 else (vCurrent + 0.01 if vTarget > vCurrent else vCurrent - 0.01)
 
-            # Update the NeoPixel colour.
+            # print(f"HSV Current: {hCurrent}, {sCurrent}, {vCurrent}")
+
+            # Update and write the NeoPixel colour.
             for i in range(numOfLeds):
                 neoPixels[i] = hsv_to_rgb(hCurrent, sCurrent, vCurrent)
-
-            # Write the NeoPixel data.
             neoPixels.write()
-
-            # Update the current LED status.
-            myLedStatus = rgb_to_hex(*hsv_to_rgb(hCurrent, sCurrent, vCurrent))
 
             # When the LED colour is changing, use a short delay to make the colour changing smoothly.
             await asyncio.sleep(0.01)
@@ -465,7 +468,7 @@ async def led_update():
 
 # Function: Touch Handler
 async def touch_handler():
-    global ledStatus
+    global ledTargetRgb
     isTouched = False
     touchThreshold = 350
     while True:
@@ -477,8 +480,9 @@ async def touch_handler():
 
         if touchValue <= touchThreshold and not isTouched:
             # Change the LED status to the next one.
-            ledStatus = ledStatusList[(ledStatusList.index(ledStatus) + 1) % len(ledStatusList)]
-            print(f"Touch changed LED to: {ledStatus}.")
+            ledTargetRgb = ledStatusList[(ledStatusList.index(ledTargetRgb) + 1) % len(ledStatusList)]
+
+            print(f"Touch changed LED to: {ledTargetRgb}.")
             isTouched = True
         elif touchValue > touchThreshold and isTouched:
             isTouched = False
