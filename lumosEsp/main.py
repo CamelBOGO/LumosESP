@@ -15,9 +15,8 @@ mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
 apPassword = "1234567890"
-wifiSsid = "TP-LINK_ED469C"
-wifiPassword = "Pi3.14159265"
 network.hostname(host)
+gc.collect()
 
 
 # ==================================================
@@ -25,7 +24,6 @@ network.hostname(host)
 # ==================================================
 # Touch Pad
 touchPin = TouchPad(Pin(15))
-touchValue = touchPin.read()
 
 # ADC for MIC
 mic = ADC(Pin(34), atten=ADC.ATTN_11DB)
@@ -81,13 +79,11 @@ def rgb_to_hex(r, g, b):
 # Input: h, s, v where h is in the range 0-360, s and v are in the range 0-1.
 # Output: (r, g, b) where r, g, b are integers in the range 0-255.
 def hsv_to_rgb(h, s, v):
-    # If hue is out of range, rotate it back in range.
-    h = h % 360
-
     # Check if the inputs are in the valid range.
     if not (0 <= h <= 360 and 0 <= s <= 1 and 0 <= v <= 1):
+        # If hue is out of range, rotate it back in range.
+        h = h % 360
         # Fix the inputs to the valid range.
-        h = max(0, min(h, 360))
         s = max(0, min(s, 1))
         v = max(0, min(v, 1))
 
@@ -260,16 +256,14 @@ async def ap_handler():
             # Activate the AP.
             ap.active(True)
             while not ap.active():
-                print("Activating AP...")
                 await asyncio.sleep(1)
 
             # Print the success message and the ap config.
-            print("AP is activated successfully.")
-            print(ap.ifconfig())
+            # print("AP is activated successfully.")
+            # print(ap.ifconfig())
 
         # If the network mode is 1, and the AP is activated, deactivate the AP.
         elif networkMode == 1 and ap.active():
-            print("Deactivating AP...")
             ap.active(False)
 
         await asyncio.sleep(2)
@@ -295,20 +289,20 @@ async def wifi_handler():
             # The loop to wait for the WiFi connection.
             attempts = 0
             while not wlan.isconnected():
+                # Only try 10 times to connect to the WiFi.
                 if attempts >= 10:
                     # print("Connection failed. Switching to AP mode...")
                     networkMode = 0
                     break
-                print("Connecting to WiFi...")
                 attempts += 1
                 await asyncio.sleep(2)
 
             # Print the success message and the wlan config.
-            if wlan.isconnected():
-                print("Connection successful")
-                wlanConfig = wlan.ifconfig()
-                print(
-                    f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
+            # if wlan.isconnected():
+            #     print("Connection successful")
+            #     wlanConfig = wlan.ifconfig()
+            #     print(
+            #         f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
 
         # If the network mode is 0, and the WiFi is connected, disconnect the WiFi.
         elif networkMode == 0 and wlan.isconnected():
@@ -344,18 +338,23 @@ async def led_off():
         await asyncio.sleep(0.01)
 
 
+# Function: Handle the LED single colour mode.
 async def led_single():
     global ledTargetRgb, inAudioMode, micValueMax
 
     # Get the current LED status.
     myLedStatusRgb = rgb_to_hex(*neoPixels[0])
-    hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatusRgb))
+
+    # Initialize the HSV values.
+    hCurrent, sCurrent, vCurrent = None, None, None
 
     # Check if the current LED status is off.
     if myLedStatusRgb == 0:
         # If yes, use the target LED status, and set the brightness to 0.
         hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
         vCurrent = 0
+    else:
+        hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatusRgb))
 
     # If it is still in single colour mode, update the target HSV values.
     while isinstance(ledTargetRgb, int):  # If it is still an integer, that means it is still an RGB value.
@@ -429,7 +428,7 @@ async def led_rainbow():
                 neoPixels[ledNum] = hsv_to_rgb(hue + (360 * ledNum / numOfLeds), 1, val)
             neoPixels.write()
 
-            # Increment val for brightness, but do not exceed 1.
+            # Assume the LEDs are off, increment val for brightness, but do not exceed 1.
             if val < 1:
                 val = min(val + 0.01, int(1))
 
@@ -454,8 +453,7 @@ async def led_handler():
             await led_single()
             continue
 
-        # If the current LED status is equal to the target LED status, check again in 1 second.
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
 
 
 # Function: Touch Handler
@@ -490,15 +488,15 @@ async def mic_handler():
             # Get the MIC value.
             micValue = mic.read_u16()
 
-            # # Update the dynamic range if necessary
-            # if micValue > dymamic_range:
-            #     dymamic_range = micValue
-            # # Else, reduce the dynamic range slowly.
-            # else:
-            #     dymamic_range = max(int(dymamic_range - 100), 1)
+            # Update the dynamic range if necessary
+            if micValue > dymamic_range:
+                dymamic_range = micValue
+            # Else, reduce the dynamic range slowly.
+            else:
+                dymamic_range = max(int(dymamic_range - 100), 1)
 
-            # # Remap the value according to the dynamic range
-            # micValue = int((micValue / dymamic_range) * 65535)
+            # Remap the value according to the dynamic range
+            micValue = int((micValue / dymamic_range) * 65535)
 
             # Update the MIC value to the global variable.
             if micValue > micValueMax:
