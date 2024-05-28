@@ -56,11 +56,14 @@
             </form>
 
             <!-- The Text of Current Colour -->
-            <h6>Current Colour:</h6>
+            <h6>Current Colour</h6>
             <p id="currentColour">N/A</p>
 
+            <h6>Audio Mode</h6>
+            <button id="audioMode" class="outline" style="width: 100%" onclick="putAudioMode()">OFF</button>
+
             <!-- WiFi Status -->
-            <h6>WiFi Status:</h6>
+            <h6>WiFi Status</h6>
             <p id="wifiStatus">N/A</p>
             <p id="ipAddress">N/A</p>
 
@@ -92,22 +95,6 @@
             if (text === "cycle") document.getElementById("currentColour").innerText = "Cycle";
             else if (text === "rainbow") document.getElementById("currentColour").innerText = "Rainbow";
             else document.getElementById("currentColour").innerText = decToHexColour(text);
-        }
-
-        // Function: Set Selected Colour
-        function setSelectedColour(value) {
-            // Currently not implemented.
-            // If the value is a number, convert it to a hex string "0xRRGGBB" in upper case.
-            // if (typeof value === "number") {
-            //     value = "0x" + value.toString(16).toUpperCase().padStart(6, "0");
-            //     document.getElementById("selectColour").value = value;
-            //     console.log("Set selected colour:", value);
-            // }
-            // If the value is a string, it should be "cycle" or "rainbow".
-            // else if (typeof value === "string" && (value === "cycle" || value === "rainbow")) {
-            //     document.getElementById("selectColour").value = value;
-            //     console.log("Set selected colour:", value);
-            // }
         }
 
         // Function: Set WiFi Status Text
@@ -161,8 +148,72 @@
                 // Set the current colour text.
                 if (data.led) {
                     setColourText(data.led);
-                    setSelectedColour(data.led);
                 } else console.error("Invalid response from server.");
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
+
+        // Function: GET Audio Mode from Server
+        async function getAudioMode() {
+            try {
+                // Fetch the current audio mode.
+                const response = await fetch("/api/audio_mode");
+
+                // Check if the response was successful.
+                if (!response.ok) {
+                    console.error("Failed to fetch audio mode");
+                    return;
+                }
+
+                // Parse the response JSON.
+                const data = await response.json();
+
+                // Modify the button according to the response.
+                if (data.isAudio) {
+                    document.getElementById("audioMode").classList.remove("outline");
+                    document.getElementById("audioMode").innerText = "ON";
+                } else {
+                    document.getElementById("audioMode").classList.add("outline");
+                    document.getElementById("audioMode").innerText = "OFF";
+                }
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
+
+        // Function: PUT Audio Mode to Server
+        async function putAudioMode() {
+            try {
+                // Get the current value from the button text.
+                const isAudio = document.getElementById("audioMode").innerText === "OFF";
+
+                // Send a PUT request to the server to change the audio mode.
+                const response = await fetch("/api/audio_mode", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ isAudio: isAudio }),
+                });
+
+                // Check if the response was successful.
+                if (response.status !== 200) {
+                    console.error("Failed to change audio mode");
+                    return;
+                }
+
+                // Parse the response JSON.
+                const data = await response.json();
+
+                // Modify the button according to the response.
+                if (data.isAudio) {
+                    document.getElementById("audioMode").classList.remove("outline");
+                    document.getElementById("audioMode").innerText = "ON";
+                } else {
+                    document.getElementById("audioMode").classList.add("outline");
+                    document.getElementById("audioMode").innerText = "OFF";
+                }
             } catch (error) {
                 console.error("An error occurred:", error);
             }
@@ -300,6 +351,7 @@
         document.getElementById("wifiForm").addEventListener("submit", handleWifiSubmit);
 
         getCurrentColour();
+        getAudioMode();
         getWifiStatus();
     </script>
 </html>

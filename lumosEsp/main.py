@@ -30,7 +30,7 @@ touchPin = TouchPad(Pin(15))
 # ADC for MIC
 mic = ADC(Pin(34), atten=ADC.ATTN_11DB)
 micValueMax = 0  # The global variable to store the amplitude. It will be reduced slowly.
-inAudioMode = True  # Set to True to enable the audio mode.
+inAudioMode = False  # Set to True to enable the audio mode.
 
 # NeoPixel
 numOfLeds = 5
