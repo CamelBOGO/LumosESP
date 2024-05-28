@@ -1,6 +1,16 @@
 # LumosESP
 
-A web server for ESP32 to control the LED lighting.
+A web server for ESP32 to control the LED lighting on MicroPython.
+
+## About
+
+Introducing the latest open-source project from BOGO - a wireless control solution for LED light bases used with acrylic products. Unlike the current market offerings, our project addresses the lack of wireless control options, allowing users to go beyond manual control or single-color modes.
+
+Our solution is a mini web server hosted on an ESP32 microcontroller. Users can connect to this server and control the WS2812 LEDs via a user-friendly web application interface. The project comes pre-loaded with a variety of colour options and modes, including the ability to respond to audio input.
+
+The wireless control capabilities support both Access Point (AP) and Wi-Fi modes, providing users with flexibility in their setup and connectivity options. Additionally, a simple touch control function is supported, providing users with an intuitive way to interact with the lighting setup.
+
+With this open-source project, we aim to empower users to enhance their LED-based acrylic products with wireless control and customization capabilities. Unlock the full potential of your LED light bases and elevate your creative projects to new heights.
 
 ## Pin Configuration
 
