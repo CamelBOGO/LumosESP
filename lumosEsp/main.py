@@ -10,11 +10,13 @@ gc.collect()
 # ==================================================
 # WiFi and Device Settings
 # ==================================================
-networkMode = 0  # 0: AP, 1: WiFi, 2: Both
+networkMode = 1  # 0: AP, 1: WiFi, 2: Both
 mac = network.WLAN().config("mac")
 host = "esp32-" + "".join("{:02x}".format(b) for b in mac[3:])
 apSsid = "ESP32-" + "".join("{:02x}".format(b) for b in mac[3:]).upper() + "-AP"
 apPassword = "1234567890"
+wifiSsid = "TP-LINK_ED469C"
+wifiPassword = "Pi3.14159265"
 network.hostname(host)
 gc.collect()
 
@@ -238,6 +240,26 @@ async def led_put(req):
         return {"error": "Invalid data"}, 400
 
 
+@app.get("/api/audio_mode")
+async def audio_mode_get(req):
+    return {"isAudio": inAudioMode}, 200
+
+
+@app.put("/api/audio_mode")
+async def audio_mode_put(req):
+    global inAudioMode
+
+    # Get the json data from the request.
+    data = req.json
+
+    # Check if the data is existed and valid.
+    if "isAudio" in data and isinstance(data["isAudio"], bool):
+        inAudioMode = data["isAudio"]
+        return {"isAudio": inAudioMode}, 200
+    else:
+        return {"error": "Invalid data"}, 400
+
+
 # ==================================================
 # asyncio Functions
 # ==================================================
@@ -298,11 +320,11 @@ async def wifi_handler():
                 await asyncio.sleep(2)
 
             # Print the success message and the wlan config.
-            # if wlan.isconnected():
-            #     print("Connection successful")
-            #     wlanConfig = wlan.ifconfig()
-            #     print(
-            #         f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
+            if wlan.isconnected():
+                print("Connection successful")
+                wlanConfig = wlan.ifconfig()
+                print(
+                    f"Wifi connected as {host}/{wlanConfig[0]}, net={wlanConfig[1]}, gw={wlanConfig[2]}, dns={wlanConfig[3]}")
 
         # If the network mode is 0, and the WiFi is connected, disconnect the WiFi.
         elif networkMode == 0 and wlan.isconnected():
@@ -357,7 +379,7 @@ async def led_single():
         hCurrent, sCurrent, vCurrent = rgb_to_hsv(*hex_to_rgb(myLedStatusRgb))
 
     # If it is still in single colour mode, update the target HSV values.
-    while isinstance(ledTargetRgb, int):  # If it is still an integer, that means it is still an RGB value.
+    while isinstance(ledTargetRgb, int) and ledTargetRgb != 0:  # int means still in single colour, 0 means off
         # Update the target HSV values to prevent the LED status from changing during the audio mode.
         hTarget, sTarget, vTarget = rgb_to_hsv(*hex_to_rgb(ledTargetRgb))
 
@@ -447,6 +469,9 @@ async def led_handler():
         elif ledTargetRgb == "rainbow":
             await led_off()
             await led_rainbow()
+            await led_off()
+            continue
+        elif isinstance(ledTargetRgb, int) and ledTargetRgb == 0:
             await led_off()
             continue
         else:
