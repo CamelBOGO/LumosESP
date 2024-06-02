@@ -30,7 +30,7 @@ touchPin = TouchPad(Pin(15))
 # ADC for MIC
 mic = ADC(Pin(34), atten=ADC.ATTN_11DB)
 micValueMax = 0  # The global variable to store the amplitude. It will be reduced slowly.
-inAudioMode = False  # Set to True to enable the audio mode.
+inAudioMode = True  # Set to True to enable the audio mode.
 
 # NeoPixel
 numOfLeds = 5
@@ -510,15 +510,21 @@ async def mic_handler():
     decay_rate = 0.95  # Adjust this value to change the rate of decay
     while True:
         if inAudioMode:
-            # Get the MIC value.
-            micValue = mic.read_u16()
+            # Get 32 sound samples
+            samples = []
+            for i in range(32):
+                samples.append(mic.read_u16())
+
+            # Calculate the amplitude.
+            micValue = max(samples) - min(samples)
+            # print(f"MIC: {micValue}")
 
             # Update the dynamic range if necessary
             if micValue > dymamic_range:
                 dymamic_range = micValue
             # Else, reduce the dynamic range slowly.
             else:
-                dymamic_range = max(int(dymamic_range - 100), 1)
+                dymamic_range = max(int(dymamic_range - 10), 1)
 
             # Remap the value according to the dynamic range
             micValue = int((micValue / dymamic_range) * 65535)
@@ -529,6 +535,9 @@ async def mic_handler():
             # Else, reduce the MIC value slowly.
             else:
                 micValueMax = max(int(micValueMax * decay_rate), 0)
+
+            # Print the MIC value
+            # print(f"MIC Max: {micValueMax}")
 
         await asyncio.sleep(0.005)
 
