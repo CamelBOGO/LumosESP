@@ -506,8 +506,8 @@ async def touch_handler():
 # Function: ADC for MIC
 async def mic_handler():
     global micValueMax
-    dymamic_range = 1  # Initialize with a small value
-    decay_rate = 0.95  # Adjust this value to change the rate of decay
+    dymamic_range = 3000  # Initialize with a small value
+    decay_rate = 0.995  # Adjust this value to change the rate of decay
     while True:
         if inAudioMode:
             # Get 32 sound samples
@@ -524,7 +524,7 @@ async def mic_handler():
                 dymamic_range = micValue
             # Else, reduce the dynamic range slowly.
             else:
-                dymamic_range = max(int(dymamic_range - 10), 1)
+                dymamic_range = max(int(dymamic_range - 1), 3000)
 
             # Remap the value according to the dynamic range
             micValue = int((micValue / dymamic_range) * 65535)
@@ -539,7 +539,7 @@ async def mic_handler():
             # Print the MIC value
             # print(f"MIC Max: {micValueMax}")
 
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(0.001)
 
 
 # ==================================================
