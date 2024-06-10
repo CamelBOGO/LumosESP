@@ -26,3 +26,13 @@ From left to right, not including the strapping pins, the pins are as follows:
 | GPIO22 | SCL      | I2C Clock (Temp. Sensor) |
 | GPIO3  | RXD0     | UART RX                  |
 | GPIO1  | TXD0     | UART TX                  |
+
+## Used Libraries
+
+-   [MicroPython](https://micropython.org/) by Damien George.
+-   [microdot](https://github.com/miguelgrinberg/microdot) by Miguel Grinberg.
+-   [Pico CSS](https://picocss.com/) by Adnan Hajdarevic.
+
+## WLED
+
+This project is just a quick implementation of the software part of LumosESP based on MicroPython and SPA concepts. To unlock more features, it is recommended to use the [WLED](https://kno.wled.ge/) library built by Aircoookie and other contributors. However, the WLED has not supported the SHTC3 sensor for temperature and humidity monitoring yet.
